@@ -1,1 +1,171 @@
-1111
+<!doctype html>
+<html lang="tr"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Axii Lisans Yönetimi</title>
+<style>
+:root{color-scheme:dark light;--bg:#0e0d0a;--card:#16140e;--fg:#d6c79c;--soft:#a89a78;--acc:#f0c040;--bad:#e8604c;--ok:#7fc77f;--line:#2f2a1c;--inp:#1a1710}
+@media (prefers-color-scheme: light){:root{--bg:#f5f2ea;--card:#ffffff;--fg:#2b2616;--soft:#6b6048;--acc:#8a6200;--bad:#b3261e;--ok:#2e7d32;--line:#ddd6c2;--inp:#faf7ef}}
+*{box-sizing:border-box}
+body{margin:0;padding:16px;background:var(--bg);color:var(--fg);font:15px/1.45 "Segoe UI",system-ui,sans-serif}
+h1{font-size:20px;margin:0 0 12px;color:var(--acc)}
+h2{font-size:16px;margin:0 0 10px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:14px;margin:0 0 14px;max-width:1000px}
+input,button{font:inherit}
+input{background:var(--inp);color:var(--fg);border:1px solid var(--line);border-radius:6px;padding:7px 9px}
+button{background:var(--acc);color:#111;border:0;border-radius:6px;padding:7px 12px;cursor:pointer;font-weight:600}
+button.k{background:transparent;color:var(--fg);border:1px solid var(--line);font-weight:500;padding:4px 8px;margin:2px 2px 2px 0}
+button.k:hover{border-color:var(--acc)}
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:6px 0}
+label{color:var(--soft);font-size:13px}
+.msg{margin:8px 0;min-height:20px}
+.bad{color:var(--bad)}.ok{color:var(--ok)}
+.yeni{font-family:Consolas,monospace;font-size:18px;letter-spacing:1px;padding:8px 10px;border:1px dashed var(--acc);border-radius:8px;display:inline-block;margin-top:6px;user-select:all}
+.tw{overflow-x:auto}
+table{border-collapse:collapse;width:100%;min-width:760px}
+th,td{padding:6px 8px;border-bottom:1px solid var(--line);text-align:left;vertical-align:top}
+th{color:var(--soft);font-weight:600;font-size:13px}
+td.m{font-family:Consolas,monospace;white-space:nowrap}
+pre{white-space:pre-wrap;word-break:break-all;background:var(--inp);border:1px solid var(--line);border-radius:6px;padding:8px;margin:4px 0}
+.gizli{display:none}
+</style></head><body>
+<h1>Axii Lisans Yönetimi</h1>
+
+<div class="card" id="girisKart">
+  <h2>Giriş</h2>
+  <div class="row">
+    <input id="tok" type="password" placeholder="ADMIN_TOKEN şifren" style="min-width:260px">
+    <button id="girisBtn">Giriş</button>
+  </div>
+  <div class="msg" id="girisMsg"></div>
+</div>
+
+<div class="card gizli" id="imzaKart">
+  <h2>İmza anahtarı (tek seferlik kurulum)</h2>
+  <div class="msg">Sunucuda henüz SIGNING_KEY yok. Aşağıdaki düğmeyle üret. <b>ÖZEL ANAHTARI kimseyle paylaşma</b>;
+  Cloudflare'de SIGNING_KEY adıyla Secret olarak kaydet. Açık anahtarlar (X ve Y) gizli değildir, uygulamaya yazılır.</div>
+  <div class="row"><button id="keygenBtn">İmza anahtarı üret</button></div>
+  <div id="keygenCikti"></div>
+</div>
+
+<div class="card gizli" id="panel">
+  <h2>Yeni lisans oluştur</h2>
+  <div class="row">
+    <label>Gün</label><input id="gun" type="number" value="30" min="1" max="3650" style="width:80px">
+    <label>Cihaz sayısı</label><input id="cihaz" type="number" value="2" min="1" max="50" style="width:70px">
+    <label>Not (kime verdin)</label><input id="not" placeholder="örn. Ahmet" maxlength="100" style="min-width:180px">
+    <button id="olusturBtn">Oluştur</button>
+  </div>
+  <div class="msg" id="olusturMsg"></div>
+</div>
+
+<div class="card gizli" id="liste">
+  <h2>Lisanslar <button class="k" id="yenileBtn">Yenile</button></h2>
+  <div class="msg" id="listeMsg"></div>
+  <div class="tw"><table><thead><tr>
+    <th>Anahtar</th><th>Durum</th><th>Bitiş</th><th>Cihaz</th><th>Son görülme</th><th>Not</th><th>İşlem</th>
+  </tr></thead><tbody id="tbody"></tbody></table></div>
+</div>
+
+<script>
+var token = sessionStorage.getItem("axii_token") || "";
+function $(id){ return document.getElementById(id); }
+var API_KOK = "https://axii-lisans.kamiltugceduran.workers.dev";
+function api(yol, govde){
+  yol = API_KOK + yol;
+  var o = { headers: { "Authorization": "Bearer " + token } };
+  if (govde !== undefined) { o.method = "POST"; o.headers["Content-Type"] = "application/json"; o.body = JSON.stringify(govde); }
+  return fetch(yol, o).then(function(r){ return r.json().then(function(j){ j._status = r.status; return j; }); });
+}
+function yaz(el, metin, sinif){ el.textContent = metin; el.className = "msg " + (sinif || ""); }
+function tarihYaz(sn){ if (!sn) return "-"; return new Date(sn * 1000).toLocaleString("tr-TR"); }
+
+function giris(){
+  token = $("tok").value.trim() || token;
+  if (!token) { yaz($("girisMsg"), "Şifre gir.", "bad"); return; }
+  yaz($("girisMsg"), "Kontrol ediliyor...", "");
+  api("/admin/api/status").then(function(j){
+    if (j._status === 401) { yaz($("girisMsg"), "Şifre yanlış (ya da ADMIN_TOKEN Cloudflare'de ayarlı değil).", "bad"); return; }
+    if (!j.ok) { yaz($("girisMsg"), "Hata: " + (j.code || j._status), "bad"); return; }
+    sessionStorage.setItem("axii_token", token);
+    $("girisKart").classList.add("gizli");
+    if (!j.signing_key) { $("imzaKart").classList.remove("gizli"); }
+    else { $("imzaKart").classList.add("gizli"); }
+    $("panel").classList.remove("gizli");
+    $("liste").classList.remove("gizli");
+    listele();
+  }).catch(function(){ yaz($("girisMsg"), "Sunucuya ulaşılamadı.", "bad"); });
+}
+
+function keygen(){
+  api("/admin/api/keygen", {}).then(function(j){
+    var kutu = $("keygenCikti"); kutu.textContent = "";
+    if (!j.ok) { kutu.textContent = "Hata: " + (j.code || ""); return; }
+    function blok(baslik, deger){
+      var b = document.createElement("div"); b.textContent = baslik;
+      var p = document.createElement("pre"); p.textContent = deger;
+      kutu.appendChild(b); kutu.appendChild(p);
+    }
+    blok("1) ÖZEL ANAHTAR (GİZLİ) — Cloudflare > Worker > Settings > Variables and Secrets > SIGNING_KEY (Secret):", j.private_key);
+    blok("2) AÇIK ANAHTAR X (gizli değil):", j.public_x);
+    blok("3) AÇIK ANAHTAR Y (gizli değil):", j.public_y);
+    var u = document.createElement("div"); u.className = "msg bad";
+    u.textContent = "Bu ekranı kapatmadan önce hepsini kaydet. Özel anahtar bir daha gösterilmez.";
+    kutu.appendChild(u);
+  });
+}
+
+function olustur(){
+  yaz($("olusturMsg"), "Oluşturuluyor...", "");
+  api("/admin/api/create", { days: Number($("gun").value), max_devices: Number($("cihaz").value), note: $("not").value }).then(function(j){
+    var el = $("olusturMsg");
+    if (!j.ok) { yaz(el, "Hata: " + (j.code || ""), "bad"); return; }
+    el.className = "msg ok"; el.textContent = "Oluşturuldu (bitiş " + j.expires + "): ";
+    var s = document.createElement("div"); s.className = "yeni"; s.textContent = j.key; el.appendChild(document.createElement("br")); el.appendChild(s);
+    listele();
+  });
+}
+
+function islem(yol, govde, onay){
+  if (onay && !confirm(onay)) return;
+  api(yol, govde).then(function(j){
+    if (!j.ok) { alert("Hata: " + (j.code || j._status)); }
+    listele();
+  });
+}
+
+function listele(){
+  yaz($("listeMsg"), "Yükleniyor...", "");
+  api("/admin/api/list").then(function(j){
+    if (!j.ok) { yaz($("listeMsg"), "Hata: " + (j.code || ""), "bad"); return; }
+    yaz($("listeMsg"), j.items.length + " lisans.", "");
+    var tb = $("tbody"); tb.textContent = "";
+    j.items.forEach(function(x){
+      var tr = document.createElement("tr");
+      function td(metin, sinif){ var c = document.createElement("td"); c.textContent = metin; if (sinif) c.className = sinif; tr.appendChild(c); return c; }
+      td(x.key, "m");
+      var dolmus = x.expires < j.today;
+      var d = td(!x.active ? "İPTAL" : (dolmus ? "SÜRESİ DOLDU" : "Aktif"));
+      d.className = (!x.active || dolmus) ? "bad" : "ok";
+      td(x.expires);
+      td(x.devices + " / " + x.max_devices);
+      td(tarihYaz(x.last_seen));
+      td(x.note || "");
+      var c = document.createElement("td");
+      function btn(ad, fn){ var b = document.createElement("button"); b.className = "k"; b.textContent = ad; b.onclick = fn; c.appendChild(b); }
+      btn("Süre uzat", function(){ var g = prompt("Kaç gün uzatılsın?", "30"); if (g) islem("/admin/api/extend", { key: x.key, days: Number(g) }); });
+      btn(x.active ? "İptal et" : "Tekrar aç", function(){ islem("/admin/api/setactive", { key: x.key, active: !x.active }, x.active ? "Bu lisans iptal edilsin mi?" : null); });
+      btn("Cihazları sıfırla", function(){ islem("/admin/api/resetdevices", { key: x.key }, "Kayıtlı cihazlar silinsin mi? (Kullanıcı yeni bilgisayarda tekrar giriş yapabilir.)"); });
+      btn("Cihaz limiti", function(){ var g = prompt("Yeni cihaz limiti (1-50):", String(x.max_devices)); if (g) islem("/admin/api/setmax", { key: x.key, max_devices: Number(g) }); });
+      tr.appendChild(c);
+      tb.appendChild(tr);
+    });
+  });
+}
+
+$("girisBtn").onclick = giris;
+$("tok").onkeydown = function(e){ if (e.key === "Enter") giris(); };
+$("keygenBtn").onclick = keygen;
+$("olusturBtn").onclick = olustur;
+$("yenileBtn").onclick = listele;
+if (token) { giris(); }
+</script></body></html>
