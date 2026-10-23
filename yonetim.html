@@ -61,6 +61,32 @@
       </div>
     </section>
 
+    <section data-s="sur" hidden>
+      <h2>Sürüm</h2>
+      <p class="s">Uygulamanın yeni sürümünü yayınlayın. Kullanıcılar uygulamayı açtığında güncelleme önerisi görür.</p>
+      <div class="card">
+        <h3>Yayındaki sürüm</h3>
+        <div class="msg" id="surumBilgi"></div>
+      </div>
+      <div class="card">
+        <h3>Yeni sürüm yayınla</h3>
+        <div class="row">
+          <label>Sürüm</label><input id="sSurum" placeholder="örn. 1.1.1" style="width:110px">
+          <label>Minimum sürüm</label><input id="sMin" placeholder="boş = zorunlu değil" style="width:150px">
+          <input type="file" id="sDosya" accept=".exe">
+          <button id="sYukle">Yükle ve yayınla</button>
+        </div>
+        <p class="s" style="margin:8px 0 0">Sürüm numarası, AHK dosyasındaki LISANS_SURUM değeriyle aynı olmalıdır. Minimum sürüm doluysa ondan eski uygulamalar açılmayı reddeder.</p>
+        <div class="bar gizli" id="sBarDis"><div id="sBarIc"></div></div>
+        <div class="msg" id="sMsg"></div>
+      </div>
+      <div class="card">
+        <h3>Minimum sürümü değiştir</h3>
+        <div class="row"><input id="sMin2" placeholder="boş = kısıtlama yok" style="width:170px"><button class="o" id="sMinBtn">Kaydet</button></div>
+        <div class="msg" id="sMinMsg"></div>
+      </div>
+    </section>
+
   </main>
 </div>
 
@@ -91,9 +117,9 @@ function giris() {
     $("giris").classList.add("gizli"); $("app").classList.remove("gizli");
     if (!j.signing_key) $("imzaKart").classList.remove("gizli");
     P.kur({
-      menu: [["lis", "Lisanslar"], ["gor", "Görseller"]],
+      menu: [["lis", "Lisanslar"], ["gor", "Görseller"], ["sur", "Sürüm"]],
       alt: '<a id="cikis">Çıkış yap</a>',
-      ac: { lis: listele, gor: gListele }
+      ac: { lis: listele, gor: gListele, sur: surumGoster }
     });
     $("cikis").onclick = function () { sessionStorage.removeItem("axii_token"); location.hash = ""; location.reload(); };
   }).catch(function () { P.yaz($("girisMsg"), "Sunucuya ulaşılamadı.", "bad"); });
@@ -201,6 +227,53 @@ function gListele() {
     });
   });
 }
+
+// ---- Sürüm ----
+function surumGoster() {
+  api("/admin/api/surum-bilgi").then(function (j) {
+    var m = $("surumBilgi");
+    if (!j.ok) { P.yaz(m, "Hata: " + (j.code || j._status), "bad"); return; }
+    if (!j.surum) { P.yaz(m, "Henüz yayınlanmış sürüm yok.", "soft"); return; }
+    var x = j.surum;
+    P.yaz(m, "Sürüm " + x.surum + " · minimum " + (x.min_surum || "yok") + " · " + (x.boyut / 1048576).toFixed(2) + " MB · " + tarih(x.guncelleme), "ok");
+    m.appendChild(document.createElement("br")); m.appendChild(el("span", "SHA-256: " + x.sha256, "soft"));
+  });
+}
+function hexOzet(buf) { return Array.from(new Uint8Array(buf)).map(function (b) { return b.toString(16).padStart(2, "0"); }).join(""); }
+var PARCA_BAYT = 750000;   // 3'ün katı: parçalar bağımsız base64'lenebilir
+async function surumYukle() {
+  var f = $("sDosya").files[0], sv = $("sSurum").value.trim(), mn = $("sMin").value.trim();
+  if (!sv || !f) { P.yaz($("sMsg"), "Sürüm numarasını yazın ve exe dosyasını seçin.", "bad"); return; }
+  if (f.size < 100000 || f.size > 30 * 1048576) { P.yaz($("sMsg"), "Dosya boyutu uygun değil.", "bad"); return; }
+  if (!confirm("Sürüm " + sv + " yayınlansın mı? Kullanıcılar güncelleme önerisi alacak.")) return;
+  $("sYukle").disabled = true; $("sBarDis").classList.remove("gizli"); $("sBarIc").style.width = "0%";
+  try {
+    P.yaz($("sMsg"), "Dosya hazırlanıyor...", "soft");
+    var sha = hexOzet(await crypto.subtle.digest("SHA-256", await f.arrayBuffer()));
+    var yukleme = Math.floor(Date.now() / 1000), adet = Math.ceil(f.size / PARCA_BAYT);
+    for (var i = 0; i < adet; i++) {
+      P.yaz($("sMsg"), "Yükleniyor (" + (i + 1) + "/" + adet + ")...", "soft");
+      var b64 = await b64Oku(f.slice(i * PARCA_BAYT, (i + 1) * PARCA_BAYT));
+      var j = await api("/admin/api/surum-parca", { yukleme: yukleme, idx: i, veri: b64 });
+      if (!j.ok) throw new Error(j.code || j._status);
+      $("sBarIc").style.width = Math.round(((i + 1) / adet) * 100) + "%";
+    }
+    var r = await api("/admin/api/surum-yayinla", { yukleme: yukleme, parca: adet, boyut: f.size, sha256: sha, surum: sv, min_surum: mn });
+    var kod = { bad_version: "Sürüm numarası geçersiz (örn. 1.1.1). Minimum sürüm, yayınlanan sürümden büyük olamaz.", missing_parts: "Bazı parçalar eksik, tekrar deneyin." };
+    if (!r.ok) throw new Error(kod[r.code] || r.code);
+    P.yaz($("sMsg"), "Yayınlandı. SHA-256: " + sha, "ok"); surumGoster();
+  } catch (e) {
+    P.yaz($("sMsg"), "Yükleme başarısız: " + (e && e.message ? e.message : "bağlantı hatası"), "bad");
+  }
+  $("sYukle").disabled = false;
+}
+function surumMin() {
+  api("/admin/api/surum-min", { min_surum: $("sMin2").value.trim() }).then(function (j) {
+    if (!j.ok) { P.yaz($("sMinMsg"), j.code === "bad_version" ? "Geçersiz değer. Minimum sürüm, yayındaki sürümden büyük olamaz." : "Hata: " + (j.code || ""), "bad"); return; }
+    P.yaz($("sMinMsg"), "Kaydedildi.", "ok"); surumGoster();
+  });
+}
+$("sYukle").onclick = surumYukle; $("sMinBtn").onclick = surumMin;
 
 $("girisBtn").onclick = giris;
 $("tok").onkeydown = function (e) { if (e.key === "Enter") giris(); };
