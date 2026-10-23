@@ -23,5 +23,15 @@ var Panel = (function () {
     window.addEventListener("hashchange", goster);
     goster();
   }
-  return { IC: IC, API: API, PANEL_URL: PANEL_URL, $: $, yaz: yaz, el: el, kur: kur };
+  // Oturum token'ı (üye paneli): localStorage. Lisans anahtarı tarayıcıda tutulmaz.
+  var TK = "axii_oturum";
+  // Tüm API çağrıları POST + Authorization header: anahtar/token URL'de gitmez. Sonuca _status eklenir.
+  function api(yol, govde, token) {
+    var t = token !== undefined ? token : (localStorage.getItem(TK) || "");
+    var h = { "Content-Type": "application/json" };
+    if (t) h["Authorization"] = "Bearer " + t;
+    return fetch(API + yol, { method: "POST", headers: h, body: JSON.stringify(govde || {}) })
+      .then(function (r) { return r.json().then(function (j) { j._status = r.status; return j; }); });
+  }
+  return { IC: IC, API: API, PANEL_URL: PANEL_URL, TK: TK, $: $, yaz: yaz, el: el, kur: kur, api: api };
 })();

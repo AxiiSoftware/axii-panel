@@ -9,8 +9,10 @@
 <div class="gate" id="giris">
   <div class="brand"><img id="gIc" alt="">AXII YÖNETİM</div>
   <div class="card">
-    <div class="row"><input id="tok" type="password" placeholder="Yönetici şifresi" style="flex:1"><button id="girisBtn">Giriş</button></div>
+    <div class="row"><input id="ep" type="email" placeholder="E-posta" autocomplete="username" style="flex:1"></div>
+    <div class="row"><input id="tok" type="password" placeholder="Şifre" autocomplete="current-password" style="flex:1"><button id="girisBtn">Giriş</button></div>
     <div class="msg" id="girisMsg"></div>
+    <p class="s" style="font-size:13px;margin:0"><a id="kurtarma" style="cursor:pointer;text-decoration:underline">Kurtarma şifresiyle gir</a></p>
   </div>
   <p class="s" style="text-align:center;font-size:13px"><a href="https://axiisoftware.github.io/axii-panel/" style="color:inherit">axiisoftware.github.io/axii-panel</a></p>
 </div>
@@ -43,6 +45,22 @@
         <div class="row" style="justify-content:space-between"><h3 style="margin:0">Liste</h3><button class="o s" id="yenileBtn">Yenile</button></div>
         <div class="msg" id="listeMsg"></div>
         <div class="tw"><table><thead><tr><th>Anahtar</th><th>Durum</th><th>Bitiş</th><th>Cihaz</th><th>Son görülme</th><th>Not</th><th>İşlem</th></tr></thead><tbody id="tbody"></tbody></table></div>
+      </div>
+    </section>
+
+    <section data-s="uye" hidden>
+      <h2>Üyeler</h2>
+      <p class="s">Kayıt olan kullanıcıları onaylayın, şifre verin ya da silin. Onay bekleyenler en üstte görünür.</p>
+      <div class="card">
+        <div class="row" style="justify-content:space-between"><h3 style="margin:0">Hesaplar</h3><button class="o s" id="uYenile">Yenile</button></div>
+        <div class="msg" id="uListeMsg"></div>
+        <div class="tw"><table><thead><tr><th>E-posta</th><th>Rol</th><th>Durum</th><th>Lisans anahtarı</th><th>Kayıt</th><th>İşlem</th></tr></thead><tbody id="uTbody"></tbody></table></div>
+      </div>
+      <div class="card">
+        <h3>Admin hesabı oluştur</h3>
+        <p class="s" style="margin:0 0 8px">Lisans anahtarı gerektirmeyen yönetici hesabı. Şifre en az 8 karakter olmalı.</p>
+        <div class="row"><input id="aEp" type="email" placeholder="E-posta" style="min-width:220px"><input id="aSf" type="password" placeholder="Şifre" autocomplete="new-password"><button id="aBtn">Oluştur</button></div>
+        <div class="msg" id="aMsg"></div>
       </div>
     </section>
 
@@ -93,7 +111,7 @@
 <script src="panel.js"></script>
 <script>
 var P = Panel, $ = P.$, el = P.el;
-var token = sessionStorage.getItem("axii_token") || "";
+var token = sessionStorage.getItem("axii_token") || localStorage.getItem(P.TK) || "", kurtarmaModu = false;
 $("gIc").src = P.IC;
 var fav = document.createElement("link"); fav.rel = "icon"; fav.href = P.IC; document.head.appendChild(fav);
 
@@ -104,25 +122,94 @@ function api(yol, govde) {
 }
 function tarih(sn) { return sn ? new Date(sn * 1000).toLocaleString("tr-TR") : "-"; }
 
-// ---- Giriş: şifre doğrulanmadan menü ve panel HİÇ gösterilmez ----
-function giris() {
-  token = $("tok").value.trim() || token;
-  if (!token) { P.yaz($("girisMsg"), "Şifreyi girin.", "bad"); return; }
+// ---- Giriş: doğrulanmadan menü ve panel HİÇ gösterilmez ----
+// Normal giriş: e-posta + şifre (rolü admin olan hesap). Kurtarma: eski ADMIN_TOKEN şifresi.
+function girisDene() {
+  if (kurtarmaModu) { token = $("tok").value.trim(); giris(); return; }
+  var e = $("ep").value.trim(), p = $("tok").value;
+  if (!e || !p) { P.yaz($("girisMsg"), "E-posta ve şifreyi girin.", "bad"); return; }
   P.yaz($("girisMsg"), "Kontrol ediliyor...", "soft");
+  P.api("/v1/uye/giris", { eposta: e, sifre: p }, "").then(function (j) {
+    if (j._status === 429) { P.yaz($("girisMsg"), "Çok fazla hatalı deneme. Bir süre bekleyin.", "bad"); return; }
+    if (!j.ok) { P.yaz($("girisMsg"), j.code === "pending" ? "Hesap henüz onaylanmamış." : "E-posta ya da şifre hatalı.", "bad"); return; }
+    if (j.rol !== "admin") { P.api("/v1/uye/cikis", {}, j.token).catch(function () {}); P.yaz($("girisMsg"), "Bu hesap yönetici değil.", "bad"); return; }
+    token = j.token; giris();
+  }).catch(function () { P.yaz($("girisMsg"), "Sunucuya ulaşılamadı.", "bad"); });
+}
+function giris() {
+  if (!token) { P.yaz($("girisMsg"), "Bilgileri girin.", "bad"); return; }
   api("/admin/api/status").then(function (j) {
-    if (j._status === 401) { token = ""; sessionStorage.removeItem("axii_token"); P.yaz($("girisMsg"), "Şifre yanlış.", "bad"); return; }
+    if (j._status === 401) { token = ""; sessionStorage.removeItem("axii_token"); P.yaz($("girisMsg"), kurtarmaModu ? "Şifre yanlış." : "Yönetici oturumu bulunamadı. Giriş yapın.", kurtarmaModu ? "bad" : "soft"); return; }
     if (j._status === 429) { P.yaz($("girisMsg"), "Çok fazla hatalı deneme. Bir süre bekleyin.", "bad"); return; }
     if (!j.ok) { P.yaz($("girisMsg"), "Hata: " + (j.code || j._status), "bad"); return; }
     sessionStorage.setItem("axii_token", token);
     $("giris").classList.add("gizli"); $("app").classList.remove("gizli");
     if (!j.signing_key) $("imzaKart").classList.remove("gizli");
     P.kur({
-      menu: [["lis", "Lisanslar"], ["gor", "Görseller"], ["sur", "Sürüm"]],
+      menu: [["lis", "Lisanslar"], ["uye", "Üyeler"], ["gor", "Görseller"], ["sur", "Sürüm"]],
       alt: '<a id="cikis">Çıkış yap</a>',
-      ac: { lis: listele, gor: gListele, sur: surumGoster }
+      ac: { lis: listele, uye: uListele, gor: gListele, sur: surumGoster }
     });
-    $("cikis").onclick = function () { sessionStorage.removeItem("axii_token"); location.hash = ""; location.reload(); };
+    $("cikis").onclick = function () {
+      if (/^[0-9a-f]{64}$/.test(token)) {
+        P.api("/v1/uye/cikis", {}, token).catch(function () {});
+        if (localStorage.getItem(P.TK) === token) localStorage.removeItem(P.TK);
+      }
+      sessionStorage.removeItem("axii_token"); location.hash = ""; setTimeout(function () { location.reload(); }, 150);
+    };
   }).catch(function () { P.yaz($("girisMsg"), "Sunucuya ulaşılamadı.", "bad"); });
+}
+function kurtarmaAc() {
+  kurtarmaModu = !kurtarmaModu;
+  $("ep").classList.toggle("gizli", kurtarmaModu);
+  $("tok").placeholder = kurtarmaModu ? "Kurtarma (ADMIN_TOKEN) şifresi" : "Şifre";
+  $("kurtarma").textContent = kurtarmaModu ? "E-posta ile giriş yap" : "Kurtarma şifresiyle gir";
+  $("tok").value = ""; P.yaz($("girisMsg"), "", "");
+}
+
+// ---- Üyeler ----
+function rastgeleSifre() {
+  var abc = "abcdefghjkmnpqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ23456789", r = crypto.getRandomValues(new Uint8Array(12)), t = "";
+  for (var i = 0; i < 12; i++) t += abc[r[i] % abc.length];
+  return t;
+}
+function uIslem(yol, govde, onay) {
+  if (onay && !confirm(onay)) return;
+  api(yol, govde).then(function (j) { if (!j.ok) alert("Hata: " + (j.code || j._status)); uListele(); });
+}
+function uListele() {
+  P.yaz($("uListeMsg"), "Yükleniyor...", "soft");
+  api("/admin/api/uye-liste").then(function (j) {
+    if (!j.ok) { P.yaz($("uListeMsg"), "Hata: " + (j.code || j._status), "bad"); return; }
+    var bek = j.items.filter(function (x) { return x.durum === "bekliyor"; }).length;
+    P.yaz($("uListeMsg"), j.items.length + " hesap" + (bek ? ", " + bek + " onay bekliyor." : "."), bek ? "ok" : "soft");
+    var tb = $("uTbody"); tb.textContent = "";
+    j.items.forEach(function (x) {
+      var tr = el("tr");
+      tr.appendChild(el("td", x.eposta));
+      tr.appendChild(el("td", x.rol === "admin" ? "Admin" : "Üye"));
+      tr.appendChild(el("td", x.durum === "aktif" ? "Aktif" : "Onay bekliyor", x.durum === "aktif" ? "ok" : "bad"));
+      tr.appendChild(el("td", x.anahtar || "—", "m"));
+      tr.appendChild(el("td", tarih(x.olusturma)));
+      var c = el("td");
+      function btn(ad, fn) { var b = el("button", ad, "o s"); b.onclick = fn; c.appendChild(b); }
+      if (x.durum !== "aktif") btn("Onayla", function () { uIslem("/admin/api/uye-onayla", { id: x.id }); });
+      btn("Şifre ver", function () {
+        var g = prompt("Geçici şifre (en az 8 karakter). Kullanıcı girişte değiştirecek:", rastgeleSifre());
+        if (g) api("/admin/api/uye-sifre", { id: x.id, sifre: g }).then(function (r) { alert(r.ok ? "Şifre verildi. Kullanıcıya iletin: " + g : "Hata: " + (r.code || r._status)); uListele(); });
+      });
+      btn(x.rol === "admin" ? "Adminliği kaldır" : "Admin yap", function () { uIslem("/admin/api/uye-rol", { id: x.id, rol: x.rol === "admin" ? "user" : "admin" }, x.rol === "admin" ? "Yönetici yetkisi kaldırılsın mı?" : "Bu hesap yönetici yapılsın mı?"); });
+      btn("Sil", function () { uIslem("/admin/api/uye-sil", { id: x.id }, x.eposta + " hesabı silinsin mi? (Lisans anahtarı serbest kalır.)"); });
+      tr.appendChild(c); tb.appendChild(tr);
+    });
+  });
+}
+function adminOlustur() {
+  P.yaz($("aMsg"), "Oluşturuluyor...", "soft");
+  api("/admin/api/uye-admin-olustur", { eposta: $("aEp").value.trim(), sifre: $("aSf").value }).then(function (j) {
+    if (!j.ok) { P.yaz($("aMsg"), j.code === "email_taken" ? "Bu e-posta zaten kayıtlı." : j.code === "bad_request" ? "E-posta geçersiz ya da şifre 8 karakterden kısa." : "Hata: " + (j.code || j._status), "bad"); return; }
+    $("aSf").value = ""; P.yaz($("aMsg"), "Admin hesabı oluşturuldu.", "ok"); uListele();
+  });
 }
 
 // ---- Lisanslar ----
@@ -275,8 +362,11 @@ function surumMin() {
 }
 $("sYukle").onclick = surumYukle; $("sMinBtn").onclick = surumMin;
 
-$("girisBtn").onclick = giris;
-$("tok").onkeydown = function (e) { if (e.key === "Enter") giris(); };
+$("girisBtn").onclick = girisDene;
+$("tok").onkeydown = function (e) { if (e.key === "Enter") girisDene(); };
+$("ep").onkeydown = function (e) { if (e.key === "Enter") girisDene(); };
+$("kurtarma").onclick = kurtarmaAc;
+$("uYenile").onclick = uListele; $("aBtn").onclick = adminOlustur;
 $("keygenBtn").onclick = keygen; $("olusturBtn").onclick = olustur;
 $("yenileBtn").onclick = listele; $("gYenile").onclick = gListele; $("yukleBtn").onclick = yukle;
 if (token) giris();

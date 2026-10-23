@@ -13,8 +13,8 @@
       <p class="s">Lisans ve cihaz durumu paneli.</p>
       <div class="card">
         <h3>Bu panelde neler var?</h3>
-        <div class="kv"><span>Durum takip</span><span>Lisans anahtarınla otomasyonun o anki durumunu görürsün.</span></div>
-        <div class="kv"><span>Birden fazla bilgisayar</span><span>Aynı anahtarla açık her bilgisayar ayrı listelenir.</span></div>
+        <div class="kv"><span>Durum takip</span><span>Hesabınla giriş yapıp otomasyonun o anki durumunu görürsün.</span></div>
+        <div class="kv"><span>Birden fazla bilgisayar</span><span>Lisansına bağlı her bilgisayar ayrı listelenir.</span></div>
         <div class="kv"><span>Ekran görüntüsü</span><span>İstediğin bilgisayarın client görüntüsünü anlık alabilirsin.</span></div>
       </div>
       <div class="card">
@@ -26,10 +26,27 @@
 
     <section data-s="durum" hidden>
       <h2>Durum takip</h2>
-      <p class="s">Lisans anahtarını girerek bilgisayarlarını ve otomasyon durumunu görüntüle.</p>
-      <div class="card">
-        <div class="row"><input id="key" placeholder="Lisans anahtarı" autocomplete="off" style="min-width:260px"><button id="gitBtn">Göster</button></div>
+      <p class="s">Hesabınla giriş yaparak bilgisayarlarını ve otomasyon durumunu görüntüle.</p>
+
+      <div class="card" id="girisKart">
+        <div class="row">
+          <button id="tGiris">Giriş yap</button><button id="tKayit" class="o">Kayıt ol</button>
+        </div>
+        <div class="row"><input id="eposta" type="email" placeholder="E-posta" autocomplete="username" style="min-width:260px"></div>
+        <div class="row"><input id="sifre" type="password" placeholder="Şifre" autocomplete="current-password" style="min-width:260px"></div>
+        <div class="row gizli" id="keyRow"><input id="key" placeholder="Lisans anahtarı" autocomplete="off" style="min-width:260px"></div>
+        <p class="s gizli" id="kayitNot" style="margin:6px 0">Hesabın, yönetici onayından sonra aktif olur. Şifre en az 8 karakter olmalı.</p>
+        <div class="row"><button id="formBtn">Giriş yap</button></div>
         <div class="msg" id="mesaj"></div>
+      </div>
+
+      <div class="card gizli" id="sifreKart">
+        <h3>Şifre değiştir</h3>
+        <p class="s gizli" id="sifreZorunlu" style="margin:0 0 8px">Yönetici geçici bir şifre verdi. Devam etmeden önce yeni bir şifre belirle.</p>
+        <div class="row"><input id="eskiS" type="password" placeholder="Mevcut şifre" autocomplete="current-password"></div>
+        <div class="row"><input id="yeniS" type="password" placeholder="Yeni şifre (en az 8 karakter)" autocomplete="new-password"></div>
+        <div class="row"><button id="sifreBtn">Kaydet</button><button id="sifreIptal" class="o">Vazgeç</button></div>
+        <div class="msg" id="sifreMsg"></div>
       </div>
 
       <div class="card gizli" id="sonuc">
@@ -55,7 +72,7 @@
 <script src="panel.js"></script>
 <script>
 var P = Panel, $ = P.$;
-var gZam = null, gBitis = 0, gCihaz = null;
+var gZam = null, gBitis = 0, gCihaz = null, kayitModu = false, profil = null;
 var kartlar = {};   // cihaz kimliği -> {kok, nokta, metin, zaman, btn}
 
 function gec(sn) {
@@ -67,41 +84,108 @@ function gec(sn) {
   if (f < 86400) return Math.floor(f / 3600) + " saat önce";
   return Math.floor(f / 86400) + " gün önce";
 }
-function anahtar() { return $("key").value.trim().toUpperCase(); }
+function oturum() { return localStorage.getItem(P.TK) || ""; }
+
+// ---- Giriş / kayıt ----
+var HATA = {
+  bad_credentials: "E-posta ya da şifre hatalı.", pending: "Hesabın yönetici onayı bekliyor. Onaylanınca giriş yapabilirsin.",
+  rate_limited: "Çok fazla deneme yapıldı, biraz bekle.", bad_email: "E-posta adresi geçersiz.",
+  weak_password: "Şifre en az 8 karakter olmalı.", invalid_key: "Geçersiz lisans anahtarı.", inactive: "Bu lisans devre dışı.",
+  expired: "Lisans süresi dolmuş.", key_taken: "Bu lisans anahtarı başka bir hesaba bağlı.", email_taken: "Bu e-posta ile zaten bir hesap var.",
+  bad_request: "Girdiğin bilgileri kontrol et.", no_key: "Hesabına bağlı bir lisans anahtarı yok."
+};
+function modSec(kayit) {
+  kayitModu = kayit;
+  $("keyRow").classList.toggle("gizli", !kayit); $("kayitNot").classList.toggle("gizli", !kayit);
+  $("formBtn").textContent = kayit ? "Kayıt ol" : "Giriş yap";
+  $("tGiris").className = kayit ? "o" : ""; $("tKayit").className = kayit ? "" : "o";
+  $("sifre").autocomplete = kayit ? "new-password" : "current-password";
+  P.yaz($("mesaj"), "", "");
+}
+function formGonder() {
+  var e = $("eposta").value.trim(), p = $("sifre").value;
+  if (!e || !p) { P.yaz($("mesaj"), "E-posta ve şifreyi gir.", "bad"); return; }
+  $("formBtn").disabled = true; P.yaz($("mesaj"), "Gönderiliyor...", "soft");
+  var istek = kayitModu
+    ? P.api("/v1/uye/kayit", { eposta: e, sifre: p, key: $("key").value.trim().toUpperCase() }, "")
+    : P.api("/v1/uye/giris", { eposta: e, sifre: p }, "");
+  istek.then(function (j) {
+    $("formBtn").disabled = false;
+    if (!j.ok) { P.yaz($("mesaj"), HATA[j.code] || ("Hata: " + (j.code || j._status)), "bad"); return; }
+    $("sifre").value = "";
+    if (kayitModu) { modSec(false); P.yaz($("mesaj"), "Kayıt alındı. Yönetici onayından sonra giriş yapabilirsin.", "ok"); return; }
+    localStorage.setItem(P.TK, j.token);
+    profil = j; acik();
+  }).catch(function () { $("formBtn").disabled = false; P.yaz($("mesaj"), "Sunucuya ulaşılamadı.", "bad"); });
+}
+function girisGoster() {
+  profil = null; gKapatYerel(); kartlar = {};
+  ["sonuc", "sifreKart", "gKart"].forEach(function (i) { $(i).classList.add("gizli"); });
+  $("cihazlar").textContent = ""; P.yaz($("gMsg"), "", "");
+  $("girisKart").classList.remove("gizli"); $("cikis").classList.add("gizli"); $("sifreLink").classList.add("gizli"); $("kim").textContent = ""; $("yonLink").classList.add("gizli");
+}
 function cikis() {
-  localStorage.removeItem("axii_durum_key"); $("key").value = "";
-  $("sonuc").classList.add("gizli"); $("cihazlar").textContent = ""; kartlar = {};
-  P.yaz($("mesaj"), "", ""); gKapatYerel(); P.yaz($("gMsg"), "", ""); location.hash = "#ana";
+  var t = oturum(); localStorage.removeItem(P.TK);
+  if (t) P.api("/v1/uye/cikis", {}, t).catch(function () {});
+  girisGoster(); P.yaz($("mesaj"), "Çıkış yapıldı.", "soft"); location.hash = "#ana";
+}
+
+// ---- Şifre değiştir ----
+function sifreFormu(zorunlu) {
+  $("sifreKart").classList.remove("gizli"); $("sifreZorunlu").classList.toggle("gizli", !zorunlu);
+  $("sifreIptal").classList.toggle("gizli", !!zorunlu); P.yaz($("sifreMsg"), "", "");
+}
+function sifreKaydet() {
+  P.yaz($("sifreMsg"), "Kaydediliyor...", "soft");
+  P.api("/v1/uye/sifre", { eski: $("eskiS").value, yeni: $("yeniS").value }).then(function (j) {
+    if (!j.ok) { P.yaz($("sifreMsg"), j.code === "bad_credentials" ? "Mevcut şifre yanlış." : (HATA[j.code] || ("Hata: " + j.code)), "bad"); return; }
+    $("eskiS").value = ""; $("yeniS").value = ""; $("sifreKart").classList.add("gizli");
+    if (profil) profil.degistir = false; sorgula(true);
+  });
+}
+
+// ---- Oturum açıksa profili al, paneli göster ----
+function acik() {
+  if (!oturum()) { girisGoster(); return; }
+  P.api("/v1/uye/ben").then(function (j) {
+    if (!j.ok) { localStorage.removeItem(P.TK); girisGoster(); if (j.code === "unauthorized") P.yaz($("mesaj"), "Oturum süresi doldu, tekrar giriş yap.", "soft"); return; }
+    profil = j;
+    $("girisKart").classList.add("gizli"); P.yaz($("mesaj"), "", "");
+    $("kim").textContent = j.eposta; $("cikis").classList.remove("gizli"); $("sifreLink").classList.remove("gizli");
+    $("yonLink").classList.toggle("gizli", j.rol !== "admin");
+    if (j.degistir) { sifreFormu(true); return; }
+    sorgula(true);
+  }).catch(function () { P.yaz($("mesaj"), "Sunucuya ulaşılamadı.", "bad"); $("girisKart").classList.remove("gizli"); });
 }
 
 // ---- Durum ----
 function sorgula(ilk) {
-  var key = anahtar();
-  if (!key) { P.yaz($("mesaj"), "Lisans anahtarını gir.", "bad"); return; }
-  if (ilk) P.yaz($("mesaj"), "Yükleniyor...", "soft");
-  fetch(P.API + "/v1/durum-sorgula?key=" + encodeURIComponent(key)).then(function (r) { return r.json(); }).then(function (j) {
+  if (!oturum()) return;
+  if (ilk) P.yaz($("gMsg"), "", "");
+  P.api("/v1/uye/durum").then(function (j) {
+    if (j._status === 401) { localStorage.removeItem(P.TK); girisGoster(); P.yaz($("mesaj"), "Oturum süresi doldu, tekrar giriş yap.", "soft"); return; }
     if (!j.ok) {
-      var m = { invalid_key: "Geçersiz lisans anahtarı.", bad_request: "Anahtar biçimi hatalı.", rate_limited: "Çok fazla istek gönderildi, biraz bekle.", inactive: "Bu lisans devre dışı.", expired: "Lisans süresi dolmuş." };
-      P.yaz($("mesaj"), m[j.code] || ("Hata: " + j.code), "bad"); $("sonuc").classList.add("gizli"); $("cihazlar").textContent = ""; kartlar = {}; return;
+      var m = { invalid_key: "Geçersiz lisans anahtarı.", inactive: "Bu lisans devre dışı.", expired: "Lisans süresi dolmuş.", rate_limited: "Çok fazla istek gönderildi, biraz bekle.", no_key: "Hesabına bağlı bir lisans anahtarı yok." };
+      P.yaz($("gMsg"), m[j.code] || ("Hata: " + j.code), "bad"); $("sonuc").classList.add("gizli"); $("cihazlar").textContent = ""; kartlar = {}; return;
     }
-    localStorage.setItem("axii_durum_key", key);
-    P.yaz($("mesaj"), "", ""); $("sonuc").classList.remove("gizli");
+    $("sonuc").classList.remove("gizli");
     var dolmus = j.bitis && j.bitis < new Date((j.simdi + 3 * 3600) * 1000).toISOString().slice(0, 10);
     $("lic").textContent = !j.aktif ? "İptal edilmiş" : (dolmus ? "Süresi dolmuş" : "Aktif");
     $("lic").className = (!j.aktif || dolmus) ? "bad" : "ok";
     $("bitis").textContent = j.bitis || "—";
     $("cihazSay").textContent = j.cihazlar.length + " / " + j.cihaz_limiti;
     cihazlariCiz(j.cihazlar, j.simdi);
-  }).catch(function () { P.yaz($("mesaj"), "Sunucuya ulaşılamadı.", "bad"); });
+  }).catch(function () { P.yaz($("gMsg"), "Sunucuya ulaşılamadı.", "bad"); });
 }
 
 function cihazlariCiz(liste, simdi) {
   var kap = $("cihazlar");
   if (!liste.length) {
     kap.textContent = ""; kartlar = {};
-    kap.appendChild(P.el("div", "Bu anahtarla henüz bir bilgisayar kaydedilmemiş.", "msg soft"));
+    kap.appendChild(P.el("div", "Bu lisansla henüz bir bilgisayar kaydedilmemiş.", "msg soft"));
     return;
   }
+  Array.prototype.forEach.call(kap.querySelectorAll(":scope > .msg"), function (n) { n.remove(); });
   var gelen = {};
   liste.forEach(function (c) {
     gelen[c.id] = true;
@@ -135,24 +219,24 @@ function gKapatYerel() {
   gDurdur(); $("gImg").removeAttribute("src"); $("gKart").classList.add("gizli");
 }
 function gKapat() {
-  var k = anahtar(), c = gCihaz; gKapatYerel();
-  if (k) fetch(P.API + "/v1/goruntu-sil?key=" + encodeURIComponent(k) + (c ? "&cihaz=" + encodeURIComponent(c) : "")).catch(function () {});
+  var c = gCihaz; gKapatYerel();
+  if (oturum()) P.api("/v1/uye/goruntu-sil", c ? { cihaz: c } : {}).catch(function () {});
   P.yaz($("gMsg"), "Görüntü silindi.", "soft");
 }
 function gGetir(id, ad) {
-  var key = anahtar(); if (!key) return;
+  if (!oturum()) return;
   gKapatYerel(); gCihaz = id; $("gBaslik").textContent = "Client görüntüsü: " + ad;
   butonlar(true);
   P.yaz($("gMsg"), ad + " bilgisayarından görüntü isteniyor...", "soft");
-  fetch(P.API + "/v1/goruntu-iste?key=" + encodeURIComponent(key) + "&cihaz=" + encodeURIComponent(id)).then(function (r) { return r.json(); }).then(function (j) {
+  P.api("/v1/uye/goruntu-iste", { cihaz: id }).then(function (j) {
     if (!j.ok) { P.yaz($("gMsg"), j.code === "rate_limited" ? "Çok fazla istek gönderildi, biraz bekle." : "Hata: " + j.code, "bad"); gDurdur(); return; }
     gBitis = Date.now() + 45000;
-    gZam = setInterval(function () { gSor(key, id); }, 3000);
+    gZam = setInterval(function () { gSor(id); }, 3000);
   }).catch(function () { P.yaz($("gMsg"), "Sunucuya ulaşılamadı.", "bad"); gDurdur(); });
 }
-function gSor(key, id) {
+function gSor(id) {
   if (Date.now() > gBitis) { gDurdur(); P.yaz($("gMsg"), "Bilgisayardan yanıt gelmedi. Uygulama kapalı ya da güncel olmayan bir sürüm olabilir.", "bad"); return; }
-  fetch(P.API + "/v1/goruntu-sorgula?key=" + encodeURIComponent(key) + "&cihaz=" + encodeURIComponent(id)).then(function (r) { return r.json(); }).then(function (j) {
+  P.api("/v1/uye/goruntu-sorgula", { cihaz: id }).then(function (j) {
     if (!j.ok) { gDurdur(); P.yaz($("gMsg"), "Hata: " + j.code, "bad"); return; }
     if (j.durum === "hazir") {
       gDurdur(); $("gImg").src = "data:image/jpeg;base64," + j.img;
@@ -163,18 +247,23 @@ function gSor(key, id) {
   }).catch(function () {});
 }
 
-$("gitBtn").onclick = function () { sorgula(true); };
-$("key").onkeydown = function (e) { if (e.key === "Enter") sorgula(true); };
+$("tGiris").onclick = function () { modSec(false); };
+$("tKayit").onclick = function () { modSec(true); };
+$("formBtn").onclick = formGonder;
+["eposta", "sifre", "key"].forEach(function (i) { $(i).onkeydown = function (e) { if (e.key === "Enter") formGonder(); }; });
 $("gKapat").onclick = gKapat;
+$("sifreBtn").onclick = sifreKaydet;
+$("sifreIptal").onclick = function () { $("sifreKart").classList.add("gizli"); };
+$("sifre").autocomplete = "current-password";
 
 P.kur({
   menu: [["ana", "Ana sayfa"], ["durum", "Durum takip"]],
-  alt: '<a id="cikis">Anahtarı unut</a>',
-  ac: { durum: function () { if (anahtar()) sorgula(false); } }
+  alt: '<div id="kim" class="soft" style="margin-bottom:6px;word-break:break-all"></div><a id="sifreLink" class="gizli">Şifre değiştir</a><br><a id="yonLink" href="yonetim.html" class="gizli">Yönetim paneli</a><br><a id="cikis" class="gizli">Çıkış yap</a>',
+  ac: { durum: function () { if (oturum()) { if (profil) sorgula(false); else acik(); } } }
 });
 $("cikis").onclick = cikis;
-var kayitli = localStorage.getItem("axii_durum_key");
-if (kayitli) { $("key").value = kayitli; if (location.hash === "#durum") sorgula(true); }
-setInterval(function () { if (location.hash === "#durum" && anahtar() && !$("sonuc").classList.contains("gizli")) sorgula(false); }, 15000);
+$("sifreLink").onclick = function () { if (profil) sifreFormu(false); };
+if (oturum() && location.hash === "#durum") acik();
+setInterval(function () { if (location.hash === "#durum" && oturum() && !$("sonuc").classList.contains("gizli")) sorgula(false); }, 15000);
 </script>
 </body></html>

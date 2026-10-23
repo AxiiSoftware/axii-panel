@@ -1,0 +1,183 @@
+<!doctype html>
+<html lang="tr"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex,nofollow">
+<title>Axii Editör</title>
+<link rel="stylesheet" href="panel.css">
+<style>
+body{height:100vh;display:flex;flex-direction:column;overflow:hidden}
+#bar{display:flex;gap:8px;flex-wrap:wrap;align-items:center;padding:8px 12px;background:var(--side);border-bottom:1px solid var(--line)}
+#bar b{color:var(--acc);margin-right:4px}
+select{font:inherit;font-size:14px;background:var(--bg);color:var(--fg);border:1px solid var(--line);border-radius:var(--r);padding:6px 8px}
+button.on{background:var(--acc);color:var(--on);border-color:var(--acc)}
+#stage{flex:1;min-height:0;overflow:auto;display:flex;justify-content:center;background:var(--line)}
+#fr{border:0;width:100%;height:100%;background:var(--bg);flex:none}
+#hata{padding:16px}
+#pop{position:fixed;z-index:50;width:300px;background:var(--card);border:1px solid var(--acc);border-radius:var(--r);padding:12px;box-shadow:0 8px 30px #0006}
+#pop textarea{width:100%;min-height:90px;resize:vertical;font:inherit;background:var(--bg);color:var(--fg);border:1px solid var(--line);border-radius:var(--r);padding:8px}
+#pEl{font-size:12px;color:var(--soft);margin:0 0 8px;word-break:break-all}
+#msg{font-size:13px;color:var(--soft)}
+</style></head><body>
+
+<div id="bar">
+  <b>AXII EDİTÖR</b>
+  <select id="sayfa" title="Sayfa"><option value="index.html">Panel (index.html)</option><option value="yonetim.html">Yönetim (yonetim.html)</option></select>
+  <select id="gorunum" title="Bölüm"></select>
+  <select id="genislik" title="Ekran"><option value="">Masaüstü</option><option value="768px">Tablet</option><option value="390px">Mobil</option></select>
+  <button id="duzenBtn" class="o" title="Açıkken sayfadaki öğelere tıklayınca not penceresi açılır">Düzenleme modu: Kapalı</button>
+  <button id="gizliBtn" class="o" title="Giriş yapınca görünen kartları da göster">Gizli kartları göster</button>
+  <span id="say" class="soft"></span>
+  <button id="kopyaBtn">Hepsini kopyala</button>
+  <button id="temizBtn" class="o">Temizle</button>
+  <span id="msg"></span>
+</div>
+
+<div id="stage"><iframe id="fr" title="Önizleme"></iframe></div>
+<div id="hata" class="gizli"></div>
+
+<div id="pop" class="gizli">
+  <p id="pEl"></p>
+  <textarea id="pTxt" placeholder="Burası nasıl olsun? Örn: Bu butonu büyüt, rengini maviye çevir."></textarea>
+  <div class="row"><button id="pKaydet">Kaydet</button><button id="pSil" class="o">Sil</button><button id="pIptal" class="o">Vazgeç</button></div>
+</div>
+
+<script>
+var $ = function (i) { return document.getElementById(i); };
+var KEY = "axii_editor_notlar", notlar = [], duzen = false, gizliAcik = false, acik = null, doc = null, fr = $("fr");
+try { notlar = JSON.parse(localStorage.getItem(KEY) || "[]") || []; } catch (e) { notlar = []; }
+function kaydet() { try { localStorage.setItem(KEY, JSON.stringify(notlar)); } catch (e) {} $("say").textContent = notlar.length + " not"; }
+function bilgi(m) { $("msg").textContent = m; setTimeout(function () { if ($("msg").textContent === m) $("msg").textContent = ""; }, 3500); }
+function gorunum() { return $("gorunum").value || ""; }
+
+// ---- Sayfa yükleme ----
+function yukle() { $("pop").classList.add("gizli"); $("hata").classList.add("gizli"); fr.src = $("sayfa").value; }
+fr.onload = function () {
+  try { doc = fr.contentDocument; if (!doc || !doc.body) throw 0; }
+  catch (e) {
+    $("hata").classList.remove("gizli");
+    $("hata").textContent = "Sayfa okunamadı. Editörü dosya olarak (file://) değil, GitHub Pages adresinden ya da yerel bir sunucudan aç.";
+    return;
+  }
+  enjekte(); bolumleriDoldur(); gorunumUygula(); pinCiz();
+};
+function enjekte() {
+  var st = doc.createElement("style");
+  st.textContent = ".__hv{outline:2px solid #f0c040!important;outline-offset:-2px;cursor:crosshair!important}" +
+    ".__pin{position:absolute;z-index:99999;min-width:22px;height:22px;padding:0 6px;border-radius:11px;background:#f0c040;color:#17140a;" +
+    "font:700 12px/22px sans-serif;text-align:center;cursor:pointer;box-shadow:0 1px 6px #0008}";
+  doc.head.appendChild(st);
+  doc.addEventListener("mouseover", function (e) {
+    if (!duzen) return;
+    var o = doc.querySelector(".__hv"); if (o) o.classList.remove("__hv");
+    if (!e.target.classList.contains("__pin")) e.target.classList.add("__hv");
+  }, true);
+  doc.addEventListener("click", function (e) {
+    if (!duzen) return;
+    e.preventDefault(); e.stopPropagation();
+    var t = e.target, r = fr.getBoundingClientRect();
+    if (t.classList.contains("__pin")) { ac(notlar.filter(function (n) { return n.id === t.dataset.id; })[0], r.left + e.clientX, r.top + e.clientY); return; }
+    var h = doc.querySelector(".__hv"); if (h) h.classList.remove("__hv");
+    ac({ id: "n" + Date.now(), sayfa: $("sayfa").value, gorunum: gorunum(), sel: sec(t), tag: t.tagName.toLowerCase(),
+         text: (t.innerText || t.value || t.placeholder || t.alt || "").trim().replace(/\s+/g, " ").slice(0, 60), istek: "", yeni: true },
+       r.left + e.clientX, r.top + e.clientY);
+  }, true);
+}
+function sec(el) {
+  var p = [];
+  while (el && el.nodeType === 1 && el !== doc.body && p.length < 6) {
+    if (el.id) { p.unshift("#" + el.id); break; }
+    var s = el.tagName.toLowerCase();
+    var c = Array.prototype.filter.call(el.classList, function (k) { return k.indexOf("__") !== 0 && k !== "gizli"; });
+    if (c.length) s += "." + c.slice(0, 2).join(".");
+    var kardes = el.parentNode ? Array.prototype.filter.call(el.parentNode.children, function (x) { return x.tagName === el.tagName; }) : [];
+    if (kardes.length > 1) s += ":nth-of-type(" + (kardes.indexOf(el) + 1) + ")";
+    p.unshift(s); el = el.parentNode;
+  }
+  return p.join(" > ");
+}
+
+// ---- Bölümler (data-s) ve gizli kartlar ----
+function bolumleriDoldur() {
+  var onceki = gorunum(), g = $("gorunum"), liste = Array.prototype.slice.call(doc.querySelectorAll("[data-s]"));
+  g.textContent = "";
+  liste.forEach(function (s) {
+    var o = document.createElement("option"); o.value = s.dataset.s;
+    var h = s.querySelector("h2"); o.textContent = h ? h.textContent : s.dataset.s; g.appendChild(o);
+  });
+  g.style.display = liste.length ? "" : "none";
+  if (liste.some(function (s) { return s.dataset.s === onceki; })) g.value = onceki;
+}
+function gorunumUygula() {
+  Array.prototype.forEach.call(doc.querySelectorAll("[data-s]"), function (s) { s.hidden = s.dataset.s !== gorunum(); });
+  Array.prototype.forEach.call(doc.querySelectorAll("[data-__g]"), function (e) { e.removeAttribute("data-__g"); e.classList.add("gizli"); });
+  if (gizliAcik) Array.prototype.forEach.call(doc.querySelectorAll(".gizli"), function (e) { e.setAttribute("data-__g", "1"); e.classList.remove("gizli"); });
+}
+
+// ---- İğneler ----
+function pinCiz() {
+  if (!doc) return;
+  Array.prototype.forEach.call(doc.querySelectorAll(".__pin"), function (p) { p.remove(); });
+  var w = fr.contentWindow;
+  notlar.forEach(function (n, i) {
+    if (n.sayfa !== $("sayfa").value || n.gorunum !== gorunum()) return;
+    var el; try { el = doc.querySelector(n.sel); } catch (e) { el = null; }
+    if (!el) return;
+    var r = el.getBoundingClientRect(); if (!r.width && !r.height) return;
+    var p = doc.createElement("div"); p.className = "__pin"; p.dataset.id = n.id; p.textContent = i + 1;
+    p.style.left = Math.max(0, r.right + w.scrollX - 14) + "px"; p.style.top = Math.max(0, r.top + w.scrollY - 10) + "px";
+    doc.body.appendChild(p);
+  });
+}
+
+// ---- Not penceresi ----
+function ac(n, x, y) {
+  if (!n) return;
+  acik = n; $("pEl").textContent = n.tag + (n.text ? " · \"" + n.text + "\"" : "") + "  —  " + n.sel;
+  $("pTxt").value = n.istek || ""; $("pSil").style.display = n.yeni ? "none" : "";
+  var p = $("pop"); p.classList.remove("gizli");
+  p.style.left = Math.max(8, Math.min(x + 12, innerWidth - 316)) + "px";
+  p.style.top = Math.max(8, Math.min(y + 12, innerHeight - p.offsetHeight - 8)) + "px";
+  $("pTxt").focus();
+}
+function pKapat() { $("pop").classList.add("gizli"); acik = null; }
+$("pKaydet").onclick = function () {
+  if (!acik) return;
+  var t = $("pTxt").value.trim();
+  if (!t) { if (!acik.yeni) notlar = notlar.filter(function (n) { return n.id !== acik.id; }); }
+  else { acik.istek = t; if (acik.yeni) { delete acik.yeni; notlar.push(acik); } }
+  kaydet(); pKapat(); pinCiz();
+};
+$("pSil").onclick = function () { if (acik) notlar = notlar.filter(function (n) { return n.id !== acik.id; }); kaydet(); pKapat(); pinCiz(); };
+$("pIptal").onclick = pKapat;
+document.addEventListener("keydown", function (e) { if (e.key === "Escape") pKapat(); });
+
+// ---- Kopyala / temizle ----
+function metinUret() {
+  if (!notlar.length) return "";
+  var s = "AXII PANEL DEĞİŞİKLİK NOTLARI (" + notlar.length + ")\n\n";
+  notlar.forEach(function (n, i) {
+    s += (i + 1) + ") [" + n.sayfa + " · bölüm: " + (n.gorunum || "-") + "]\n   Öğe: " + n.tag + (n.text ? " (\"" + n.text + "\")" : "") +
+      "\n   Seçici: " + n.sel + "\n   İstek: " + n.istek + "\n\n";
+  });
+  return s.trim();
+}
+$("kopyaBtn").onclick = function () {
+  var t = metinUret(); if (!t) { bilgi("Henüz not yok."); return; }
+  function yedek() { var a = document.createElement("textarea"); a.value = t; document.body.appendChild(a); a.select(); try { document.execCommand("copy"); bilgi("Kopyalandı."); } catch (e) { bilgi("Kopyalanamadı."); } a.remove(); }
+  if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(t).then(function () { bilgi("Kopyalandı. Sohbete yapıştır."); }, yedek); else yedek();
+};
+$("temizBtn").onclick = function () { if (notlar.length && confirm("Tüm notlar silinsin mi?")) { notlar = []; kaydet(); pinCiz(); } };
+
+// ---- Üst çubuk ----
+$("sayfa").onchange = yukle;
+$("gorunum").onchange = function () { gorunumUygula(); pinCiz(); };
+$("genislik").onchange = function () { fr.style.width = $("genislik").value || "100%"; setTimeout(pinCiz, 100); };
+$("duzenBtn").onclick = function () {
+  duzen = !duzen; this.textContent = "Düzenleme modu: " + (duzen ? "Açık" : "Kapalı"); this.classList.toggle("on", duzen);
+  if (!duzen && doc) { var o = doc.querySelector(".__hv"); if (o) o.classList.remove("__hv"); }
+};
+$("gizliBtn").onclick = function () { gizliAcik = !gizliAcik; this.classList.toggle("on", gizliAcik); if (doc) { gorunumUygula(); pinCiz(); } };
+window.addEventListener("resize", pinCiz);
+kaydet(); yukle();
+</script>
+</body></html>
