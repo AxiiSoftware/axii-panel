@@ -8,7 +8,7 @@
 *{box-sizing:border-box}
 body{margin:0;padding:16px;background:var(--bg);color:var(--fg);font:15px/1.45 "Segoe UI",system-ui,sans-serif}
 h1{font-size:20px;margin:0 0 12px;color:var(--acc)}
-.card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:14px;margin:0 0 14px;max-width:520px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:14px;margin:0 0 14px;max-width:720px}
 input,button{font:inherit}
 input{background:var(--inp);color:var(--fg);border:1px solid var(--line);border-radius:6px;padding:7px 9px;width:100%;max-width:300px}
 button{background:var(--acc);color:#111;border:0;border-radius:6px;padding:7px 14px;cursor:pointer;font-weight:600;margin-left:6px}
@@ -19,6 +19,10 @@ button{background:var(--acc);color:#111;border:0;border-radius:6px;padding:7px 1
 .satir{display:flex;justify-content:space-between;border-bottom:1px solid var(--line);padding:6px 0;font-size:14px}
 .satir span:first-child{color:var(--soft)}
 .gizli{display:none}
+.gbtn{margin-left:0}
+.gbtn.k{background:transparent;color:var(--fg);border:1px solid var(--line);font-weight:500}
+.gbtn:disabled{opacity:.5;cursor:default}
+#gImg{display:block;max-width:100%;border:1px solid var(--line);border-radius:6px;margin-top:10px}
 .nokta{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:6px;vertical-align:middle}
 </style></head><body>
 <h1>Axii — Durum Takip</h1>
@@ -37,6 +41,15 @@ button{background:var(--acc);color:#111;border:0;border-radius:6px;padding:7px 1
   <div class="satir"><span>Bitiş tarihi</span><span id="licBitis"></span></div>
   <div class="satir"><span>Son güncelleme</span><span id="sonGuncelleme"></span></div>
   <div class="msg soft" id="otoYenile"></div>
+</div>
+
+<div class="card gizli" id="gKart">
+  <div class="row">
+    <button id="gGetirBtn" class="gbtn">Client görselini getir</button>
+    <button id="gKapatBtn" class="gbtn k gizli">Kapat ve sil</button>
+  </div>
+  <div class="msg soft" id="gMsg">Görsel sadece sen istediğinde alınır; sunucuda saklanmaz, sayfaya geldiği anda sunucudan silinir.</div>
+  <img id="gImg" class="gizli" alt="Client görüntüsü">
 </div>
 
 <script>
@@ -85,6 +98,11 @@ function sorgula(ilk){
       baslik.appendChild(nk);
       baslik.appendChild(document.createTextNode(j.metin || "Henüz bir durum bildirilmemiş."));
       $("sonGuncelleme").textContent = gecenSureYaz(j.guncelleme);
+      if (j.guncelleme && (j.simdi - j.guncelleme) > 180) {
+        nk.style.background = "#e8604c";
+        baslik.appendChild(document.createTextNode(" (3 dakikadır haber yok, uygulama kapalı olabilir)"));
+      }
+      $("gKart").classList.remove("gizli");
       $("otoYenile").textContent = "15 saniyede bir otomatik yenilenir.";
     })
     .catch(function(){ yaz($("mesaj"), "Sunucuya ulaşılamadı.", "bad"); });
@@ -92,6 +110,53 @@ function sorgula(ilk){
 
 $("gitBtn").onclick = function(){ sorgula(true); };
 $("key").onkeydown = function(e){ if (e.key === "Enter") sorgula(true); };
+
+
+// ---- Client görseli: iste -> bekle -> göster -> sunucudan zaten silindi; "Kapat" ekrandan da kaldırır ----
+var gZamanlayici = null, gBitis = 0;
+function gDurdur(){ if (gZamanlayici) { clearInterval(gZamanlayici); gZamanlayici = null; } $("gGetirBtn").disabled = false; }
+function gKapat(){
+  $("gImg").removeAttribute("src"); $("gImg").classList.add("gizli"); $("gKapatBtn").classList.add("gizli");
+  var key = $("key").value.trim().toUpperCase();
+  if (key) fetch(API_KOK + "/v1/goruntu-sil?key=" + encodeURIComponent(key)).catch(function(){});  // sunucuda kalıntı varsa sil
+  yaz($("gMsg"), "Görsel silindi.", "soft");
+}
+function gGetir(){
+  var key = $("key").value.trim().toUpperCase();
+  if (!key) { yaz($("gMsg"), "Önce lisans anahtarını gir.", "bad"); return; }
+  gDurdur(); $("gGetirBtn").disabled = true;
+  $("gImg").removeAttribute("src"); $("gImg").classList.add("gizli"); $("gKapatBtn").classList.add("gizli");
+  yaz($("gMsg"), "İstek gönderildi, uygulamanın yanıtı bekleniyor (en fazla ~20 sn)...", "soft");
+  fetch(API_KOK + "/v1/goruntu-iste?key=" + encodeURIComponent(key))
+    .then(function(r){ return r.json(); })
+    .then(function(j){
+      if (!j.ok) { yaz($("gMsg"), j.code === "rate_limited" ? "Çok fazla deneme, biraz bekle." : "Hata: " + j.code, "bad"); gDurdur(); return; }
+      gBitis = Date.now() + 45000;
+      gZamanlayici = setInterval(function(){ gSorgula(key); }, 3000);
+    })
+    .catch(function(){ yaz($("gMsg"), "Sunucuya ulaşılamadı.", "bad"); gDurdur(); });
+}
+function gSorgula(key){
+  if (Date.now() > gBitis) { gDurdur(); yaz($("gMsg"), "Uygulamadan yanıt gelmedi. Uygulama kapalı ya da eski sürüm olabilir.", "bad"); return; }
+  fetch(API_KOK + "/v1/goruntu-sorgula?key=" + encodeURIComponent(key))
+    .then(function(r){ return r.json(); })
+    .then(function(j){
+      if (!j.ok) { gDurdur(); yaz($("gMsg"), "Hata: " + j.code, "bad"); return; }
+      if (j.durum === "hazir") {
+        gDurdur();
+        $("gImg").src = "data:image/jpeg;base64," + j.img;
+        $("gImg").classList.remove("gizli"); $("gKapatBtn").classList.remove("gizli");
+        yaz($("gMsg"), "Görsel alındı (" + new Date().toLocaleTimeString("tr-TR") + "). Sunucudaki kopya silindi.", "ok");
+      } else if (j.durum === "hata") {
+        gDurdur(); yaz($("gMsg"), "Uygulama görüntü alamadı: " + j.hata, "bad");
+      } else if (j.durum === "zaman_asimi" || j.durum === "yok") {
+        gDurdur(); yaz($("gMsg"), "Uygulamadan yanıt gelmedi. Uygulama kapalı ya da eski sürüm olabilir.", "bad");
+      }
+    })
+    .catch(function(){ /* geçici ağ hatası: sonraki turda tekrar dener */ });
+}
+$("gGetirBtn").onclick = gGetir;
+$("gKapatBtn").onclick = gKapat;
 
 var kayitliKey = localStorage.getItem("axii_durum_key");
 if (kayitliKey) { $("key").value = kayitliKey; sorgula(true); }
