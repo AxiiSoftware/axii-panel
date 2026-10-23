@@ -26,7 +26,7 @@ th,td{padding:5px 8px;border-bottom:1px solid var(--line);text-align:left}
 td.m{font-family:Consolas,monospace}
 </style></head><body>
 <h1>Axii — Görsel (PNG) Yükle</h1>
-<div class="msg soft">Buraya yüklenen görseller artık exe içine gömülmüyor; otomasyon bunları lisans doğrulandıktan sonra buradan indiriyor. Mevcut "assets" klasörünü seçince alt klasörleriyle birlikte otomatik yüklenir.</div>
+<div class="msg soft">Buraya yüklenen görseller artık exe içine gömülmüyor; otomasyon bunları lisans doğrulandıktan sonra buradan indiriyor. Görseller ve efsun referansları (.ref) buradan yüklenir. "assets" klasörünü ve "refs" klasörünü ayrı ayrı (ya da ikisini içeren üst klasörü) seçebilirsin; alt klasörleriyle birlikte otomatik yüklenir. Aynı adlı dosya tekrar yüklenirse güncellenir.</div>
 
 <div class="card" id="girisKart">
   <h2>Giriş</h2>
@@ -38,7 +38,7 @@ td.m{font-family:Consolas,monospace}
 </div>
 
 <div class="card gizli" id="yuklePanel">
-  <h2>Assets klasörünü seç</h2>
+  <h2>Klasör seç (assets / refs)</h2>
   <div class="row">
     <input type="file" id="klasorSec" webkitdirectory multiple>
     <button id="yukleBtn">Yüklemeyi başlat</button>
@@ -90,13 +90,15 @@ function dosyayiB64Oku(dosya){
 }
 
 function goreliAdVer(dosya){
+  // Efsun referansları (.ref) hangi klasörden seçilirse seçilsin "refs/<ad>.ref" olarak kaydedilir.
+  if (/\.ref$/i.test(dosya.name)) return "refs/" + dosya.name;
   var parcalar = (dosya.webkitRelativePath || dosya.name).split("/");
   if (parcalar.length > 1) parcalar.shift();  // seçilen kök klasör adını at
   return parcalar.join("/");
 }
 
 async function yukle(){
-  var dosyalar = Array.from($("klasorSec").files).filter(function(f){ return /\.(png|jpg|jpeg|gif|bmp)$/i.test(f.name); });
+  var dosyalar = Array.from($("klasorSec").files).filter(function(f){ return /\.(png|jpg|jpeg|gif|bmp|ref)$/i.test(f.name); });
   if (dosyalar.length === 0) { yaz($("yukleMsg"), "Önce bir klasör seç.", "bad"); return; }
 
   $("yukleBtn").disabled = true;
@@ -131,7 +133,7 @@ function listele(){
   yaz($("listeMsg"), "Yükleniyor...", "");
   api("/admin/api/varlik-liste").then(function(j){
     if (!j.ok) { yaz($("listeMsg"), "Hata: " + (j.code || j._status) + (j.detail ? " — " + j.detail : ""), "bad"); return; }
-    yaz($("listeMsg"), j.items.length + " görsel kayıtlı.", "");
+    yaz($("listeMsg"), j.items.length + " dosya kayıtlı.", "");
     var tb = $("tbody"); tb.textContent = "";
     j.items.forEach(function(x){
       var tr = document.createElement("tr");
