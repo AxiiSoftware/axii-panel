@@ -101,7 +101,8 @@ async function yukle(){
 
   $("yukleBtn").disabled = true;
   $("barDis").classList.remove("gizli");
-  var basarili = 0, hatali = 0;
+  var basarili = 0, hatali = 0, ilkHata = "";
+  var HAM_LIMIT_B64 = 1900000;  // sunucudaki sınırla aynı (D1 satır sınırı ~2 MB)
 
   for (var i = 0; i < dosyalar.length; i++) {
     var f = dosyalar[i];
@@ -109,21 +110,27 @@ async function yukle(){
     yaz($("yukleMsg"), "Yükleniyor (" + (i+1) + "/" + dosyalar.length + "): " + ad, "soft");
     try {
       var b64 = await dosyayiB64Oku(f);
-      var j = await api("/admin/api/varlik-yukle", { ad: ad, icerik_b64: b64 });
-      if (j.ok) basarili++; else hatali++;
-    } catch (e) { hatali++; }
+      if (b64.length > HAM_LIMIT_B64) {
+        hatali++;
+        if (!ilkHata) ilkHata = ad + " çok büyük (" + Math.round(f.size / 1024) + " KB, sınır ~1400 KB). Küçültüp tekrar dene.";
+      } else {
+        var j = await api("/admin/api/varlik-yukle", { ad: ad, icerik_b64: b64 });
+        if (j.ok) basarili++;
+        else { hatali++; if (!ilkHata) ilkHata = ad + ": " + (j.code || j._status) + (j.detail ? " — " + j.detail : ""); }
+      }
+    } catch (e) { hatali++; if (!ilkHata) ilkHata = ad + ": " + (e && e.message ? e.message : "bağlantı hatası"); }
     $("barIc").style.width = Math.round(((i+1) / dosyalar.length) * 100) + "%";
   }
 
   $("yukleBtn").disabled = false;
-  yaz($("yukleMsg"), basarili + " dosya yüklendi" + (hatali ? ", " + hatali + " hata" : "") + ".", hatali ? "bad" : "ok");
+  yaz($("yukleMsg"), basarili + " dosya yüklendi" + (hatali ? ", " + hatali + " hata. İlk hata -> " + ilkHata : "") + ".", hatali ? "bad" : "ok");
   listele();
 }
 
 function listele(){
   yaz($("listeMsg"), "Yükleniyor...", "");
   api("/admin/api/varlik-liste").then(function(j){
-    if (!j.ok) { yaz($("listeMsg"), "Hata: " + (j.code || ""), "bad"); return; }
+    if (!j.ok) { yaz($("listeMsg"), "Hata: " + (j.code || j._status) + (j.detail ? " — " + j.detail : ""), "bad"); return; }
     yaz($("listeMsg"), j.items.length + " görsel kayıtlı.", "");
     var tb = $("tbody"); tb.textContent = "";
     j.items.forEach(function(x){
