@@ -41,3 +41,5 @@ pre{white-space:pre-wrap;word-break:break-all;background:var(--bg);border:1px so
 .shot{max-width:100%;border:1px solid var(--line);border-radius:var(--r);margin-top:10px;display:block}
 .gate{max-width:380px;margin:12vh auto;padding:0 16px}.gate .brand{justify-content:center;padding:0 0 14px}
 @media(max-width:700px){.w{flex-direction:column}.side{width:100%;height:auto;position:static;flex-direction:row;align-items:center;padding:8px 10px;overflow-x:auto}.brand{padding:0 12px 0 0}.side nav{display:flex}.side nav a{margin:0 4px 0 0;white-space:nowrap}.side .alt{display:none}.main{padding:16px}}
+.metin{margin:8px 0 4px;font-size:15px;word-break:break-word}
+.kv span:last-child{text-align:right;margin-left:12px}

@@ -9,41 +9,45 @@
   <main class="main">
 
     <section data-s="ana">
-      <h2>Oyun otomasyonunda güven ve kontrol</h2>
-      <p class="s">Lisanslı, güvenli ve canlı takip edilebilir.</p>
-      <div class="cols">
-        <div class="card"><h3>Canlı takip</h3><span class="soft">Otomasyonun ne yaptığını anında gör.</span></div>
-        <div class="card"><h3>Güvenli lisans</h3><span class="soft">İmzalı doğrulama, cihaz limiti.</span></div>
-        <div class="card"><h3>Tek exe</h3><span class="soft">Ek program kurmana gerek yok.</span></div>
+      <h2>Axii Software</h2>
+      <p class="s">Lisans ve cihaz durumu paneli.</p>
+      <div class="card">
+        <h3>Bu panelde neler var?</h3>
+        <div class="kv"><span>Durum takip</span><span>Lisans anahtarınla otomasyonun o anki durumunu görürsün.</span></div>
+        <div class="kv"><span>Birden fazla bilgisayar</span><span>Aynı anahtarla açık her bilgisayar ayrı listelenir.</span></div>
+        <div class="kv"><span>Ekran görüntüsü</span><span>İstediğin bilgisayarın client görüntüsünü anlık alabilirsin.</span></div>
       </div>
       <div class="card">
-        <h3>Lisans almak ister misin?</h3>
-        <p class="s">Fiyat ve destek için bize yaz.</p>
-        <!-- TODO: kendi iletişim adresinle değiştir -->
-        <a class="btn" href="https://discord.gg/BURAYA">Bize ulaş</a>
-        <a class="btn o" href="#durum">Durumumu gör</a>
+        <h3>Lisans ve destek</h3>
+        <p class="s">Lisans, süre uzatma ve cihaz sıfırlama için uygulamadaki Seçenekler > İletişim bölümünü kullanabilirsin.</p>
+        <a class="btn" href="#durum">Durum takibine git</a>
       </div>
     </section>
 
     <section data-s="durum" hidden>
       <h2>Durum takip</h2>
-      <p class="s">Lisans anahtarını gir, otomasyonunu izle.</p>
+      <p class="s">Lisans anahtarını girerek bilgisayarlarını ve otomasyon durumunu görüntüle.</p>
       <div class="card">
         <div class="row"><input id="key" placeholder="Lisans anahtarı" autocomplete="off" style="min-width:260px"><button id="gitBtn">Göster</button></div>
         <div class="msg" id="mesaj"></div>
       </div>
+
       <div class="card gizli" id="sonuc">
-        <div style="font-size:17px;margin-bottom:6px" id="baslik"></div>
         <div class="kv"><span>Lisans</span><span id="lic"></span></div>
         <div class="kv"><span>Bitiş tarihi</span><span id="bitis"></span></div>
-        <div class="kv"><span>Son güncelleme</span><span id="guncel"></span></div>
-        <div class="row" style="margin-top:14px">
-          <button id="gGetir">Client görselini getir</button>
-          <button id="gKapat" class="o gizli">Kapat ve sil</button>
-        </div>
-        <div class="msg soft" id="gMsg">Görsel yalnızca sen istediğinde alınır; sunucuya geldiği anda silinir.</div>
-        <img id="gImg" class="shot gizli" alt="Client görüntüsü">
+        <div class="kv"><span>Kayıtlı bilgisayar</span><span id="cihazSay"></span></div>
       </div>
+
+      <div id="cihazlar"></div>
+
+      <div class="card gizli" id="gKart">
+        <div class="row" style="justify-content:space-between">
+          <h3 style="margin:0" id="gBaslik">Client görüntüsü</h3>
+          <button id="gKapat" class="o s">Kapat ve sil</button>
+        </div>
+        <img id="gImg" class="shot" alt="Client görüntüsü">
+      </div>
+      <div class="msg soft" id="gMsg"></div>
     </section>
 
   </main>
@@ -51,7 +55,8 @@
 <script src="panel.js"></script>
 <script>
 var P = Panel, $ = P.$;
-var zam = null, gZam = null, gBitis = 0;
+var gZam = null, gBitis = 0, gCihaz = null;
+var kartlar = {};   // cihaz kimliği -> {kok, nokta, metin, zaman, btn}
 
 function gec(sn) {
   if (sn == null) return "—";
@@ -64,69 +69,103 @@ function gec(sn) {
 }
 function anahtar() { return $("key").value.trim().toUpperCase(); }
 function cikis() {
-  localStorage.removeItem("axii_durum_key"); $("key").value = ""; $("sonuc").classList.add("gizli"); P.yaz($("mesaj"), "", "");
-  gKapatYerel(); location.hash = "#ana";
+  localStorage.removeItem("axii_durum_key"); $("key").value = "";
+  $("sonuc").classList.add("gizli"); $("cihazlar").textContent = ""; kartlar = {};
+  P.yaz($("mesaj"), "", ""); gKapatYerel(); P.yaz($("gMsg"), "", ""); location.hash = "#ana";
 }
 
+// ---- Durum ----
 function sorgula(ilk) {
   var key = anahtar();
   if (!key) { P.yaz($("mesaj"), "Lisans anahtarını gir.", "bad"); return; }
   if (ilk) P.yaz($("mesaj"), "Yükleniyor...", "soft");
   fetch(P.API + "/v1/durum-sorgula?key=" + encodeURIComponent(key)).then(function (r) { return r.json(); }).then(function (j) {
     if (!j.ok) {
-      var m = { invalid_key: "Geçersiz lisans anahtarı.", bad_request: "Anahtar biçimi hatalı.", rate_limited: "Çok fazla deneme, biraz bekle.", inactive: "Bu lisans devre dışı.", expired: "Lisans süresi dolmuş." };
-      P.yaz($("mesaj"), m[j.code] || ("Hata: " + j.code), "bad"); $("sonuc").classList.add("gizli"); return;
+      var m = { invalid_key: "Geçersiz lisans anahtarı.", bad_request: "Anahtar biçimi hatalı.", rate_limited: "Çok fazla istek gönderildi, biraz bekle.", inactive: "Bu lisans devre dışı.", expired: "Lisans süresi dolmuş." };
+      P.yaz($("mesaj"), m[j.code] || ("Hata: " + j.code), "bad"); $("sonuc").classList.add("gizli"); $("cihazlar").textContent = ""; kartlar = {}; return;
     }
     localStorage.setItem("axii_durum_key", key);
     P.yaz($("mesaj"), "", ""); $("sonuc").classList.remove("gizli");
-    var dolmus = !j.aktif || (j.bitis && j.bitis < new Date(j.simdi * 1000).toISOString().slice(0, 10));
+    var dolmus = j.bitis && j.bitis < new Date((j.simdi + 3 * 3600) * 1000).toISOString().slice(0, 10);
     $("lic").textContent = !j.aktif ? "İptal edilmiş" : (dolmus ? "Süresi dolmuş" : "Aktif");
     $("lic").className = (!j.aktif || dolmus) ? "bad" : "ok";
     $("bitis").textContent = j.bitis || "—";
-    var b = $("baslik"); b.textContent = "";
-    var nk = P.el("span", "", "dot");
-    var eski = j.guncelleme && (j.simdi - j.guncelleme) > 180;
-    nk.style.background = eski ? "#e8604c" : (j.metin ? "#4fb35c" : "#888");
-    b.appendChild(nk);
-    b.appendChild(document.createTextNode((j.metin || "Henüz bir durum bildirilmemiş.") + (eski ? " (3 dakikadır haber yok, uygulama kapalı olabilir)" : "")));
-    $("guncel").textContent = gec(j.guncelleme);
+    $("cihazSay").textContent = j.cihazlar.length + " / " + j.cihaz_limiti;
+    cihazlariCiz(j.cihazlar, j.simdi);
   }).catch(function () { P.yaz($("mesaj"), "Sunucuya ulaşılamadı.", "bad"); });
 }
 
-// ---- Client görseli ----
-function gDurdur() { if (gZam) { clearInterval(gZam); gZam = null; } $("gGetir").disabled = false; }
-function gKapatYerel() { gDurdur(); $("gImg").removeAttribute("src"); $("gImg").classList.add("gizli"); $("gKapat").classList.add("gizli"); }
-function gKapat() {
-  gKapatYerel();
-  var k = anahtar(); if (k) fetch(P.API + "/v1/goruntu-sil?key=" + encodeURIComponent(k)).catch(function () {});
-  P.yaz($("gMsg"), "Görsel silindi.", "soft");
+function cihazlariCiz(liste, simdi) {
+  var kap = $("cihazlar");
+  if (!liste.length) {
+    kap.textContent = ""; kartlar = {};
+    kap.appendChild(P.el("div", "Bu anahtarla henüz bir bilgisayar kaydedilmemiş.", "msg soft"));
+    return;
+  }
+  var gelen = {};
+  liste.forEach(function (c) {
+    gelen[c.id] = true;
+    var k = kartlar[c.id];
+    if (!k) {
+      k = { kok: P.el("div", "", "card"), ust: P.el("div", "", "row"), nokta: P.el("span", "", "dot"), ad: P.el("strong"), metin: P.el("div", "", "metin"), zaman: P.el("div", "", "soft"), btn: P.el("button", "Ekran görüntüsü al", "o") };
+      k.ust.style.justifyContent = "space-between";
+      var sol = P.el("div"); sol.appendChild(k.nokta); sol.appendChild(k.ad);
+      k.ust.appendChild(sol); k.ust.appendChild(k.btn);
+      k.zaman.style.fontSize = "13px";
+      k.kok.appendChild(k.ust); k.kok.appendChild(k.metin); k.kok.appendChild(k.zaman);
+      k.btn.onclick = function () { gGetir(c.id, k.ad.textContent); };
+      kartlar[c.id] = k; kap.appendChild(k.kok);
+    }
+    var eski = c.guncelleme == null || (simdi - c.guncelleme) > 180;
+    k.nokta.style.background = eski ? "#8b8f99" : "#4fb35c";
+    k.ad.textContent = c.ad;
+    k.metin.textContent = c.metin ? c.metin : "Henüz durum bildirilmedi.";
+    k.zaman.textContent = (eski ? "Bağlantı yok (uygulama kapalı olabilir) · " : "") + "Son güncelleme: " + gec(c.guncelleme);
+    k.btn.disabled = !!gZam;
+  });
+  Object.keys(kartlar).forEach(function (id) {
+    if (!gelen[id]) { kartlar[id].kok.remove(); delete kartlar[id]; }
+  });
 }
-function gGetir() {
+
+// ---- Client görüntüsü (cihaz bazlı) ----
+function butonlar(kilit) { Object.keys(kartlar).forEach(function (id) { kartlar[id].btn.disabled = kilit; }); }
+function gDurdur() { if (gZam) { clearInterval(gZam); gZam = null; } butonlar(false); }
+function gKapatYerel() {
+  gDurdur(); $("gImg").removeAttribute("src"); $("gKart").classList.add("gizli");
+}
+function gKapat() {
+  var k = anahtar(), c = gCihaz; gKapatYerel();
+  if (k) fetch(P.API + "/v1/goruntu-sil?key=" + encodeURIComponent(k) + (c ? "&cihaz=" + encodeURIComponent(c) : "")).catch(function () {});
+  P.yaz($("gMsg"), "Görüntü silindi.", "soft");
+}
+function gGetir(id, ad) {
   var key = anahtar(); if (!key) return;
-  gKapatYerel(); $("gGetir").disabled = true;
-  P.yaz($("gMsg"), "İstek gönderildi, uygulamanın yanıtı bekleniyor...", "soft");
-  fetch(P.API + "/v1/goruntu-iste?key=" + encodeURIComponent(key)).then(function (r) { return r.json(); }).then(function (j) {
-    if (!j.ok) { P.yaz($("gMsg"), j.code === "rate_limited" ? "Biraz bekle." : "Hata: " + j.code, "bad"); gDurdur(); return; }
+  gKapatYerel(); gCihaz = id; $("gBaslik").textContent = "Client görüntüsü: " + ad;
+  butonlar(true);
+  P.yaz($("gMsg"), ad + " bilgisayarından görüntü isteniyor...", "soft");
+  fetch(P.API + "/v1/goruntu-iste?key=" + encodeURIComponent(key) + "&cihaz=" + encodeURIComponent(id)).then(function (r) { return r.json(); }).then(function (j) {
+    if (!j.ok) { P.yaz($("gMsg"), j.code === "rate_limited" ? "Çok fazla istek gönderildi, biraz bekle." : "Hata: " + j.code, "bad"); gDurdur(); return; }
     gBitis = Date.now() + 45000;
-    gZam = setInterval(function () { gSor(key); }, 3000);
+    gZam = setInterval(function () { gSor(key, id); }, 3000);
   }).catch(function () { P.yaz($("gMsg"), "Sunucuya ulaşılamadı.", "bad"); gDurdur(); });
 }
-function gSor(key) {
-  if (Date.now() > gBitis) { gDurdur(); P.yaz($("gMsg"), "Uygulamadan yanıt gelmedi (kapalı ya da eski sürüm olabilir).", "bad"); return; }
-  fetch(P.API + "/v1/goruntu-sorgula?key=" + encodeURIComponent(key)).then(function (r) { return r.json(); }).then(function (j) {
+function gSor(key, id) {
+  if (Date.now() > gBitis) { gDurdur(); P.yaz($("gMsg"), "Bilgisayardan yanıt gelmedi. Uygulama kapalı ya da güncel olmayan bir sürüm olabilir.", "bad"); return; }
+  fetch(P.API + "/v1/goruntu-sorgula?key=" + encodeURIComponent(key) + "&cihaz=" + encodeURIComponent(id)).then(function (r) { return r.json(); }).then(function (j) {
     if (!j.ok) { gDurdur(); P.yaz($("gMsg"), "Hata: " + j.code, "bad"); return; }
     if (j.durum === "hazir") {
       gDurdur(); $("gImg").src = "data:image/jpeg;base64," + j.img;
-      $("gImg").classList.remove("gizli"); $("gKapat").classList.remove("gizli");
-      P.yaz($("gMsg"), "Görsel alındı. Sunucudaki kopya silindi.", "ok");
-    } else if (j.durum === "hata") { gDurdur(); P.yaz($("gMsg"), "Uygulama görüntü alamadı: " + j.hata, "bad"); }
-    else if (j.durum !== "bekliyor") { gDurdur(); P.yaz($("gMsg"), "Uygulamadan yanıt gelmedi.", "bad"); }
+      $("gKart").classList.remove("gizli");
+      P.yaz($("gMsg"), "Görüntü alındı. Sunucudaki kopya silindi.", "ok");
+    } else if (j.durum === "hata") { gDurdur(); P.yaz($("gMsg"), "Görüntü alınamadı: " + j.hata, "bad"); }
+    else if (j.durum !== "bekliyor") { gDurdur(); P.yaz($("gMsg"), "Bilgisayardan yanıt gelmedi.", "bad"); }
   }).catch(function () {});
 }
 
 $("gitBtn").onclick = function () { sorgula(true); };
 $("key").onkeydown = function (e) { if (e.key === "Enter") sorgula(true); };
-$("gGetir").onclick = gGetir; $("gKapat").onclick = gKapat;
+$("gKapat").onclick = gKapat;
 
 P.kur({
   menu: [["ana", "Ana sayfa"], ["durum", "Durum takip"]],
@@ -136,6 +175,6 @@ P.kur({
 $("cikis").onclick = cikis;
 var kayitli = localStorage.getItem("axii_durum_key");
 if (kayitli) { $("key").value = kayitli; if (location.hash === "#durum") sorgula(true); }
-zam = setInterval(function () { if (location.hash === "#durum" && anahtar() && !$("sonuc").classList.contains("gizli")) sorgula(false); }, 15000);
+setInterval(function () { if (location.hash === "#durum" && anahtar() && !$("sonuc").classList.contains("gizli")) sorgula(false); }, 15000);
 </script>
 </body></html>

@@ -12,6 +12,7 @@
     <div class="row"><input id="tok" type="password" placeholder="Yönetici şifresi" style="flex:1"><button id="girisBtn">Giriş</button></div>
     <div class="msg" id="girisMsg"></div>
   </div>
+  <p class="s" style="text-align:center;font-size:13px"><a href="https://axiisoftware.github.io/axii-panel/" style="color:inherit">axiisoftware.github.io/axii-panel</a></p>
 </div>
 
 <div class="w gizli" id="app">
@@ -20,11 +21,11 @@
 
     <section data-s="lis">
       <h2>Lisanslar</h2>
-      <p class="s">Oluştur, uzat, iptal et.</p>
+      <p class="s">Lisans oluşturma, süre uzatma ve iptal işlemleri.</p>
 
       <div class="card gizli" id="imzaKart">
         <h3>İmza anahtarı (tek seferlik kurulum)</h3>
-        <p class="s">Sunucuda SIGNING_KEY yok. Özel anahtarı kimseyle paylaşma; Cloudflare’de SIGNING_KEY adıyla Secret olarak kaydet. X ve Y açık anahtarlardır, uygulamaya yazılır.</p>
+        <p class="s">Sunucuda SIGNING_KEY tanımlı değil. Özel anahtarı paylaşmayın; Cloudflare’de SIGNING_KEY adıyla Secret olarak kaydedin. X ve Y açık anahtarlardır ve uygulamaya yazılır.</p>
         <button id="keygenBtn">İmza anahtarı üret</button><div id="keygenCikti"></div>
       </div>
 
@@ -47,7 +48,7 @@
 
     <section data-s="gor" hidden>
       <h2>Görseller</h2>
-      <p class="s">assets / refs klasörünü seç. Aynı adlı dosya güncellenir. Efsun referansları (.ref) otomatik refs/ altına gider.</p>
+      <p class="s">assets ve refs klasörünü seçin. Aynı adlı dosyalar güncellenir; .ref dosyaları otomatik olarak refs/ altına yüklenir.</p>
       <div class="card">
         <div class="row"><input type="file" id="klasorSec" webkitdirectory multiple><button id="yukleBtn">Yüklemeyi başlat</button></div>
         <div class="bar gizli" id="barDis"><div id="barIc"></div></div>
@@ -80,11 +81,11 @@ function tarih(sn) { return sn ? new Date(sn * 1000).toLocaleString("tr-TR") : "
 // ---- Giriş: şifre doğrulanmadan menü ve panel HİÇ gösterilmez ----
 function giris() {
   token = $("tok").value.trim() || token;
-  if (!token) { P.yaz($("girisMsg"), "Şifre gir.", "bad"); return; }
+  if (!token) { P.yaz($("girisMsg"), "Şifreyi girin.", "bad"); return; }
   P.yaz($("girisMsg"), "Kontrol ediliyor...", "soft");
   api("/admin/api/status").then(function (j) {
     if (j._status === 401) { token = ""; sessionStorage.removeItem("axii_token"); P.yaz($("girisMsg"), "Şifre yanlış.", "bad"); return; }
-    if (j._status === 429) { P.yaz($("girisMsg"), "Çok fazla yanlış deneme, bir süre bekle.", "bad"); return; }
+    if (j._status === 429) { P.yaz($("girisMsg"), "Çok fazla hatalı deneme. Bir süre bekleyin.", "bad"); return; }
     if (!j.ok) { P.yaz($("girisMsg"), "Hata: " + (j.code || j._status), "bad"); return; }
     sessionStorage.setItem("axii_token", token);
     $("giris").classList.add("gizli"); $("app").classList.remove("gizli");
@@ -106,7 +107,7 @@ function keygen() {
     [["1) ÖZEL ANAHTAR (GİZLİ) → Cloudflare > Worker > Settings > SIGNING_KEY (Secret):", j.private_key], ["2) AÇIK ANAHTAR X:", j.public_x], ["3) AÇIK ANAHTAR Y:", j.public_y]].forEach(function (x) {
       k.appendChild(el("div", x[0])); k.appendChild(el("pre", x[1]));
     });
-    k.appendChild(el("div", "Bu ekranı kapatmadan hepsini kaydet. Özel anahtar bir daha gösterilmez.", "msg bad"));
+    k.appendChild(el("div", "Bu ekranı kapatmadan üç değeri de kaydedin. Özel anahtar tekrar gösterilmez.", "msg bad"));
   });
 }
 function olustur() {
@@ -163,7 +164,7 @@ function goreliAd(f) {
 }
 async function yukle() {
   var d = Array.from($("klasorSec").files).filter(function (f) { return /\.(png|jpg|jpeg|gif|bmp|ref)$/i.test(f.name); });
-  if (!d.length) { P.yaz($("yukleMsg"), "Önce bir klasör seç.", "bad"); return; }
+  if (!d.length) { P.yaz($("yukleMsg"), "Önce bir klasör seçin.", "bad"); return; }
   $("yukleBtn").disabled = true; $("barDis").classList.remove("gizli");
   var ok = 0, hata = 0, ilk = "";
   for (var i = 0; i < d.length; i++) {
