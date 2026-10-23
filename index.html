@@ -133,7 +133,7 @@ function olustur(){
 function islem(yol, govde, onay){
   if (onay && !confirm(onay)) return;
   api(yol, govde).then(function(j){
-    if (!j.ok) { alert("Hata: " + (j.code || j._status)); }
+    if (!j.ok) { alert("Hata: " + (j.code || j._status) + (j.detail ? " — " + j.detail : "")); }
     listele();
   });
 }
@@ -161,6 +161,7 @@ function listele(){
       btn(x.active ? "İptal et" : "Tekrar aç", function(){ islem("/admin/api/setactive", { key: x.key, active: !x.active }, x.active ? "Bu lisans iptal edilsin mi?" : null); });
       btn("Cihazları sıfırla", function(){ islem("/admin/api/resetdevices", { key: x.key }, "Kayıtlı cihazlar silinsin mi? (Kullanıcı yeni bilgisayarda tekrar giriş yapabilir.)"); });
       btn("Cihaz limiti", function(){ var g = prompt("Yeni cihaz limiti (1-50):", String(x.max_devices)); if (g) islem("/admin/api/setmax", { key: x.key, max_devices: Number(g) }); });
+      btn("Sil", function(){ if (!confirm("Bu lisans KALICI olarak silinsin mi? " + x.key + " (cihaz kayıtları ve durum bilgisi de silinir, geri alınamaz.)")) return; islem("/admin/api/delete", { key: x.key }); });
       tr.appendChild(c);
       tb.appendChild(tr);
     });
