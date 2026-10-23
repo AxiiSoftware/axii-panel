@@ -1,0 +1,153 @@
+<!doctype html>
+<html lang="tr"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Axii — Görsel Yükle</title>
+<style>
+:root{color-scheme:dark light;--bg:#0e0d0a;--card:#16140e;--fg:#d6c79c;--soft:#a89a78;--acc:#f0c040;--bad:#e8604c;--ok:#7fc77f;--line:#2f2a1c;--inp:#1a1710}
+@media (prefers-color-scheme: light){:root{--bg:#f5f2ea;--card:#ffffff;--fg:#2b2616;--soft:#6b6048;--acc:#8a6200;--bad:#b3261e;--ok:#2e7d32;--line:#ddd6c2;--inp:#faf7ef}}
+*{box-sizing:border-box}
+body{margin:0;padding:16px;background:var(--bg);color:var(--fg);font:15px/1.45 "Segoe UI",system-ui,sans-serif}
+h1{font-size:20px;margin:0 0 12px;color:var(--acc)}
+h2{font-size:16px;margin:0 0 10px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:14px;margin:0 0 14px;max-width:760px}
+input,button{font:inherit}
+input[type=password],input[type=text]{background:var(--inp);color:var(--fg);border:1px solid var(--line);border-radius:6px;padding:7px 9px;min-width:260px}
+button{background:var(--acc);color:#111;border:0;border-radius:6px;padding:7px 14px;cursor:pointer;font-weight:600}
+button.k{background:transparent;color:var(--fg);border:1px solid var(--line);font-weight:500;padding:4px 8px}
+button:disabled{opacity:.5;cursor:default}
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:6px 0}
+.msg{margin:8px 0;min-height:20px}
+.bad{color:var(--bad)}.ok{color:var(--ok)}.soft{color:var(--soft)}
+.gizli{display:none}
+.bar{height:8px;border-radius:4px;background:var(--inp);overflow:hidden;margin:8px 0;max-width:400px}
+.bar>div{height:100%;background:var(--acc);width:0%}
+table{border-collapse:collapse;width:100%;font-size:13px}
+th,td{padding:5px 8px;border-bottom:1px solid var(--line);text-align:left}
+td.m{font-family:Consolas,monospace}
+</style></head><body>
+<h1>Axii — Görsel (PNG) Yükle</h1>
+<div class="msg soft">Buraya yüklenen görseller artık exe içine gömülmüyor; otomasyon bunları lisans doğrulandıktan sonra buradan indiriyor. Mevcut "assets" klasörünü seçince alt klasörleriyle birlikte otomatik yüklenir.</div>
+
+<div class="card" id="girisKart">
+  <h2>Giriş</h2>
+  <div class="row">
+    <input id="tok" type="password" placeholder="ADMIN_TOKEN şifren">
+    <button id="girisBtn">Giriş</button>
+  </div>
+  <div class="msg" id="girisMsg"></div>
+</div>
+
+<div class="card gizli" id="yuklePanel">
+  <h2>Assets klasörünü seç</h2>
+  <div class="row">
+    <input type="file" id="klasorSec" webkitdirectory multiple>
+    <button id="yukleBtn">Yüklemeyi başlat</button>
+  </div>
+  <div class="bar gizli" id="barDis"><div id="barIc"></div></div>
+  <div class="msg" id="yukleMsg"></div>
+</div>
+
+<div class="card gizli" id="listePanel">
+  <h2>Sunucudaki görseller <button class="k" id="yenileBtn">Yenile</button></h2>
+  <div class="msg" id="listeMsg"></div>
+  <table><thead><tr><th>Ad</th><th>Boyut</th><th>Güncelleme</th><th></th></tr></thead><tbody id="tbody"></tbody></table>
+</div>
+
+<script>
+var API_KOK = "https://axii-lisans.kamiltugceduran.workers.dev";
+var token = sessionStorage.getItem("axii_token") || "";
+function $(id){ return document.getElementById(id); }
+function yaz(el, metin, sinif){ el.textContent = metin; el.className = "msg " + (sinif || ""); }
+
+function api(yol, govde){
+  var o = { headers: { "Authorization": "Bearer " + token } };
+  if (govde !== undefined) { o.method = "POST"; o.headers["Content-Type"] = "application/json"; o.body = JSON.stringify(govde); }
+  return fetch(API_KOK + yol, o).then(function(r){ return r.json().then(function(j){ j._status = r.status; return j; }); });
+}
+
+function giris(){
+  token = $("tok").value.trim() || token;
+  if (!token) { yaz($("girisMsg"), "Şifre gir.", "bad"); return; }
+  yaz($("girisMsg"), "Kontrol ediliyor...", "");
+  api("/admin/api/status").then(function(j){
+    if (j._status === 401) { yaz($("girisMsg"), "Şifre yanlış.", "bad"); return; }
+    if (!j.ok) { yaz($("girisMsg"), "Hata: " + (j.code || j._status), "bad"); return; }
+    sessionStorage.setItem("axii_token", token);
+    $("girisKart").classList.add("gizli");
+    $("yuklePanel").classList.remove("gizli");
+    $("listePanel").classList.remove("gizli");
+    listele();
+  }).catch(function(){ yaz($("girisMsg"), "Sunucuya ulaşılamadı.", "bad"); });
+}
+
+function dosyayiB64Oku(dosya){
+  return new Promise(function(resolve, reject){
+    var r = new FileReader();
+    r.onload = function(){ resolve(r.result.split(",")[1]); };
+    r.onerror = function(){ reject(new Error("okunamadı")); };
+    r.readAsDataURL(dosya);
+  });
+}
+
+function goreliAdVer(dosya){
+  var parcalar = (dosya.webkitRelativePath || dosya.name).split("/");
+  if (parcalar.length > 1) parcalar.shift();  // seçilen kök klasör adını at
+  return parcalar.join("/");
+}
+
+async function yukle(){
+  var dosyalar = Array.from($("klasorSec").files).filter(function(f){ return /\.(png|jpg|jpeg|gif|bmp)$/i.test(f.name); });
+  if (dosyalar.length === 0) { yaz($("yukleMsg"), "Önce bir klasör seç.", "bad"); return; }
+
+  $("yukleBtn").disabled = true;
+  $("barDis").classList.remove("gizli");
+  var basarili = 0, hatali = 0;
+
+  for (var i = 0; i < dosyalar.length; i++) {
+    var f = dosyalar[i];
+    var ad = goreliAdVer(f);
+    yaz($("yukleMsg"), "Yükleniyor (" + (i+1) + "/" + dosyalar.length + "): " + ad, "soft");
+    try {
+      var b64 = await dosyayiB64Oku(f);
+      var j = await api("/admin/api/varlik-yukle", { ad: ad, icerik_b64: b64 });
+      if (j.ok) basarili++; else hatali++;
+    } catch (e) { hatali++; }
+    $("barIc").style.width = Math.round(((i+1) / dosyalar.length) * 100) + "%";
+  }
+
+  $("yukleBtn").disabled = false;
+  yaz($("yukleMsg"), basarili + " dosya yüklendi" + (hatali ? ", " + hatali + " hata" : "") + ".", hatali ? "bad" : "ok");
+  listele();
+}
+
+function listele(){
+  yaz($("listeMsg"), "Yükleniyor...", "");
+  api("/admin/api/varlik-liste").then(function(j){
+    if (!j.ok) { yaz($("listeMsg"), "Hata: " + (j.code || ""), "bad"); return; }
+    yaz($("listeMsg"), j.items.length + " görsel kayıtlı.", "");
+    var tb = $("tbody"); tb.textContent = "";
+    j.items.forEach(function(x){
+      var tr = document.createElement("tr");
+      function td(metin){ var c = document.createElement("td"); c.textContent = metin; tr.appendChild(c); return c; }
+      td(x.ad).className = "m";
+      td(Math.round(x.boyut * 0.75 / 1024) + " KB");  // base64 -> yaklaşık ham bayt
+      td(x.guncelleme ? new Date(x.guncelleme * 1000).toLocaleString("tr-TR") : "-");
+      var c = document.createElement("td");
+      var b = document.createElement("button"); b.className = "k"; b.textContent = "Sil";
+      b.onclick = function(){
+        if (!confirm(x.ad + " silinsin mi?")) return;
+        api("/admin/api/varlik-sil", { ad: x.ad }).then(listele);
+      };
+      c.appendChild(b); tr.appendChild(c);
+      tb.appendChild(tr);
+    });
+  });
+}
+
+$("girisBtn").onclick = giris;
+$("tok").onkeydown = function(e){ if (e.key === "Enter") giris(); };
+$("yukleBtn").onclick = yukle;
+$("yenileBtn").onclick = listele;
+if (token) giris();
+</script>
+</body></html>
