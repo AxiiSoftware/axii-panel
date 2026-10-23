@@ -79,7 +79,11 @@ function sorgula(ilk){
       $("licDurum").className = (!j.aktif || dolmus) ? "bad" : "ok";
       $("licBitis").textContent = j.bitis || "—";
 
-      $("durumBaslik").innerHTML = '<span class="nokta" style="background:' + (j.metin ? "#7fc77f" : "#888") + '"></span>' + (j.metin || "Henüz bir durum bildirilmemiş.");
+      // innerHTML KULLANMA: j.metin dışarıdan gelen metin, HTML olarak yorumlanırsa XSS olur.
+      var baslik = $("durumBaslik"); baslik.textContent = "";
+      var nk = document.createElement("span"); nk.className = "nokta"; nk.style.background = j.metin ? "#7fc77f" : "#888";
+      baslik.appendChild(nk);
+      baslik.appendChild(document.createTextNode(j.metin || "Henüz bir durum bildirilmemiş."));
       $("sonGuncelleme").textContent = gecenSureYaz(j.guncelleme);
       $("otoYenile").textContent = "15 saniyede bir otomatik yenilenir.";
     })
