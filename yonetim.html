@@ -1,0 +1,210 @@
+<!doctype html>
+<html lang="tr"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex,nofollow">
+<title>Axii Yönetim</title>
+<link rel="stylesheet" href="panel.css">
+</head><body>
+
+<div class="gate" id="giris">
+  <div class="brand"><img id="gIc" alt="">AXII YÖNETİM</div>
+  <div class="card">
+    <div class="row"><input id="tok" type="password" placeholder="Yönetici şifresi" style="flex:1"><button id="girisBtn">Giriş</button></div>
+    <div class="msg" id="girisMsg"></div>
+  </div>
+</div>
+
+<div class="w gizli" id="app">
+  <aside class="side" id="side"></aside>
+  <main class="main">
+
+    <section data-s="lis">
+      <h2>Lisanslar</h2>
+      <p class="s">Oluştur, uzat, iptal et.</p>
+
+      <div class="card gizli" id="imzaKart">
+        <h3>İmza anahtarı (tek seferlik kurulum)</h3>
+        <p class="s">Sunucuda SIGNING_KEY yok. Özel anahtarı kimseyle paylaşma; Cloudflare’de SIGNING_KEY adıyla Secret olarak kaydet. X ve Y açık anahtarlardır, uygulamaya yazılır.</p>
+        <button id="keygenBtn">İmza anahtarı üret</button><div id="keygenCikti"></div>
+      </div>
+
+      <div class="card">
+        <div class="row">
+          <label>Gün</label><input id="gun" type="number" value="30" min="1" max="3650" style="width:80px">
+          <label>Cihaz</label><input id="cihaz" type="number" value="2" min="1" max="50" style="width:70px">
+          <label>Not</label><input id="not" placeholder="örn. Ahmet" maxlength="100" style="min-width:160px">
+          <button id="olusturBtn">Oluştur</button>
+        </div>
+        <div class="msg" id="olusturMsg"></div>
+      </div>
+
+      <div class="card">
+        <div class="row" style="justify-content:space-between"><h3 style="margin:0">Liste</h3><button class="o s" id="yenileBtn">Yenile</button></div>
+        <div class="msg" id="listeMsg"></div>
+        <div class="tw"><table><thead><tr><th>Anahtar</th><th>Durum</th><th>Bitiş</th><th>Cihaz</th><th>Son görülme</th><th>Not</th><th>İşlem</th></tr></thead><tbody id="tbody"></tbody></table></div>
+      </div>
+    </section>
+
+    <section data-s="gor" hidden>
+      <h2>Görseller</h2>
+      <p class="s">assets / refs klasörünü seç. Aynı adlı dosya güncellenir. Efsun referansları (.ref) otomatik refs/ altına gider.</p>
+      <div class="card">
+        <div class="row"><input type="file" id="klasorSec" webkitdirectory multiple><button id="yukleBtn">Yüklemeyi başlat</button></div>
+        <div class="bar gizli" id="barDis"><div id="barIc"></div></div>
+        <div class="msg" id="yukleMsg"></div>
+      </div>
+      <div class="card">
+        <div class="row" style="justify-content:space-between"><h3 style="margin:0">Sunucudaki dosyalar</h3><button class="o s" id="gYenile">Yenile</button></div>
+        <div class="msg" id="gListeMsg"></div>
+        <div class="tw"><table><thead><tr><th>Ad</th><th>Boyut</th><th>Güncelleme</th><th></th></tr></thead><tbody id="gTbody"></tbody></table></div>
+      </div>
+    </section>
+
+  </main>
+</div>
+
+<script src="panel.js"></script>
+<script>
+var P = Panel, $ = P.$, el = P.el;
+var token = sessionStorage.getItem("axii_token") || "";
+$("gIc").src = P.IC;
+var fav = document.createElement("link"); fav.rel = "icon"; fav.href = P.IC; document.head.appendChild(fav);
+
+function api(yol, govde) {
+  var o = { headers: { "Authorization": "Bearer " + token } };
+  if (govde !== undefined) { o.method = "POST"; o.headers["Content-Type"] = "application/json"; o.body = JSON.stringify(govde); }
+  return fetch(P.API + yol, o).then(function (r) { return r.json().then(function (j) { j._status = r.status; return j; }); });
+}
+function tarih(sn) { return sn ? new Date(sn * 1000).toLocaleString("tr-TR") : "-"; }
+
+// ---- Giriş: şifre doğrulanmadan menü ve panel HİÇ gösterilmez ----
+function giris() {
+  token = $("tok").value.trim() || token;
+  if (!token) { P.yaz($("girisMsg"), "Şifre gir.", "bad"); return; }
+  P.yaz($("girisMsg"), "Kontrol ediliyor...", "soft");
+  api("/admin/api/status").then(function (j) {
+    if (j._status === 401) { token = ""; sessionStorage.removeItem("axii_token"); P.yaz($("girisMsg"), "Şifre yanlış.", "bad"); return; }
+    if (j._status === 429) { P.yaz($("girisMsg"), "Çok fazla yanlış deneme, bir süre bekle.", "bad"); return; }
+    if (!j.ok) { P.yaz($("girisMsg"), "Hata: " + (j.code || j._status), "bad"); return; }
+    sessionStorage.setItem("axii_token", token);
+    $("giris").classList.add("gizli"); $("app").classList.remove("gizli");
+    if (!j.signing_key) $("imzaKart").classList.remove("gizli");
+    P.kur({
+      menu: [["lis", "Lisanslar"], ["gor", "Görseller"]],
+      alt: '<a id="cikis">Çıkış yap</a>',
+      ac: { lis: listele, gor: gListele }
+    });
+    $("cikis").onclick = function () { sessionStorage.removeItem("axii_token"); location.hash = ""; location.reload(); };
+  }).catch(function () { P.yaz($("girisMsg"), "Sunucuya ulaşılamadı.", "bad"); });
+}
+
+// ---- Lisanslar ----
+function keygen() {
+  api("/admin/api/keygen", {}).then(function (j) {
+    var k = $("keygenCikti"); k.textContent = "";
+    if (!j.ok) { k.textContent = "Hata: " + (j.code || ""); return; }
+    [["1) ÖZEL ANAHTAR (GİZLİ) → Cloudflare > Worker > Settings > SIGNING_KEY (Secret):", j.private_key], ["2) AÇIK ANAHTAR X:", j.public_x], ["3) AÇIK ANAHTAR Y:", j.public_y]].forEach(function (x) {
+      k.appendChild(el("div", x[0])); k.appendChild(el("pre", x[1]));
+    });
+    k.appendChild(el("div", "Bu ekranı kapatmadan hepsini kaydet. Özel anahtar bir daha gösterilmez.", "msg bad"));
+  });
+}
+function olustur() {
+  P.yaz($("olusturMsg"), "Oluşturuluyor...", "soft");
+  api("/admin/api/create", { days: Number($("gun").value), max_devices: Number($("cihaz").value), note: $("not").value }).then(function (j) {
+    var m = $("olusturMsg");
+    if (!j.ok) { P.yaz(m, "Hata: " + (j.code || ""), "bad"); return; }
+    P.yaz(m, "Oluşturuldu (bitiş " + j.expires + "):", "ok");
+    m.appendChild(document.createElement("br")); m.appendChild(el("div", j.key, "yeni"));
+    listele();
+  });
+}
+function islem(yol, govde, onay) {
+  if (onay && !confirm(onay)) return;
+  api(yol, govde).then(function (j) { if (!j.ok) alert("Hata: " + (j.code || j._status) + (j.detail ? " — " + j.detail : "")); listele(); });
+}
+function listele() {
+  P.yaz($("listeMsg"), "Yükleniyor...", "soft");
+  api("/admin/api/list").then(function (j) {
+    if (!j.ok) { P.yaz($("listeMsg"), "Hata: " + (j.code || ""), "bad"); return; }
+    P.yaz($("listeMsg"), j.items.length + " lisans.", "soft");
+    var tb = $("tbody"); tb.textContent = "";
+    j.items.forEach(function (x) {
+      var tr = el("tr"), dolmus = x.expires < j.today;
+      tr.appendChild(el("td", x.key, "m"));
+      tr.appendChild(el("td", !x.active ? "İPTAL" : (dolmus ? "SÜRESİ DOLDU" : "Aktif"), (!x.active || dolmus) ? "bad" : "ok"));
+      tr.appendChild(el("td", x.expires));
+      tr.appendChild(el("td", x.devices + " / " + x.max_devices));
+      tr.appendChild(el("td", tarih(x.last_seen)));
+      tr.appendChild(el("td", x.note || ""));
+      var c = el("td");
+      function btn(ad, fn) { var b = el("button", ad, "o s"); b.onclick = fn; c.appendChild(b); }
+      btn("Süre uzat", function () { var g = prompt("Kaç gün uzatılsın?", "30"); if (g) islem("/admin/api/extend", { key: x.key, days: Number(g) }); });
+      btn(x.active ? "İptal et" : "Tekrar aç", function () { islem("/admin/api/setactive", { key: x.key, active: !x.active }, x.active ? "Bu lisans iptal edilsin mi?" : null); });
+      btn("Cihazları sıfırla", function () { islem("/admin/api/resetdevices", { key: x.key }, "Kayıtlı cihazlar silinsin mi?"); });
+      btn("Cihaz limiti", function () { var g = prompt("Yeni cihaz limiti (1-50):", String(x.max_devices)); if (g) islem("/admin/api/setmax", { key: x.key, max_devices: Number(g) }); });
+      btn("Sil", function () { if (confirm("Bu lisans KALICI silinsin mi? " + x.key)) islem("/admin/api/delete", { key: x.key }); });
+      tr.appendChild(c); tb.appendChild(tr);
+    });
+  });
+}
+
+// ---- Görseller ----
+function b64Oku(f) {
+  return new Promise(function (ok, hata) {
+    var r = new FileReader(); r.onload = function () { ok(r.result.split(",")[1]); }; r.onerror = function () { hata(new Error("okunamadı")); }; r.readAsDataURL(f);
+  });
+}
+function goreliAd(f) {
+  if (/\.ref$/i.test(f.name)) return "refs/" + f.name;
+  var p = (f.webkitRelativePath || f.name).split("/");
+  if (p.length > 1) p.shift();
+  return p.join("/");
+}
+async function yukle() {
+  var d = Array.from($("klasorSec").files).filter(function (f) { return /\.(png|jpg|jpeg|gif|bmp|ref)$/i.test(f.name); });
+  if (!d.length) { P.yaz($("yukleMsg"), "Önce bir klasör seç.", "bad"); return; }
+  $("yukleBtn").disabled = true; $("barDis").classList.remove("gizli");
+  var ok = 0, hata = 0, ilk = "";
+  for (var i = 0; i < d.length; i++) {
+    var ad = goreliAd(d[i]);
+    P.yaz($("yukleMsg"), "Yükleniyor (" + (i + 1) + "/" + d.length + "): " + ad, "soft");
+    try {
+      var b64 = await b64Oku(d[i]);
+      if (b64.length > 1900000) { hata++; if (!ilk) ilk = ad + " çok büyük (" + Math.round(d[i].size / 1024) + " KB). Küçültüp tekrar dene."; }
+      else {
+        var j = await api("/admin/api/varlik-yukle", { ad: ad, icerik_b64: b64 });
+        if (j.ok) ok++; else { hata++; if (!ilk) ilk = ad + ": " + (j.code || j._status) + (j.detail ? " — " + j.detail : ""); }
+      }
+    } catch (e) { hata++; if (!ilk) ilk = ad + ": " + (e && e.message ? e.message : "bağlantı hatası"); }
+    $("barIc").style.width = Math.round(((i + 1) / d.length) * 100) + "%";
+  }
+  $("yukleBtn").disabled = false;
+  P.yaz($("yukleMsg"), ok + " dosya yüklendi" + (hata ? ", " + hata + " hata. İlk hata → " + ilk : "") + ".", hata ? "bad" : "ok");
+  gListele();
+}
+function gListele() {
+  P.yaz($("gListeMsg"), "Yükleniyor...", "soft");
+  api("/admin/api/varlik-liste").then(function (j) {
+    if (!j.ok) { P.yaz($("gListeMsg"), "Hata: " + (j.code || j._status), "bad"); return; }
+    P.yaz($("gListeMsg"), j.items.length + " dosya kayıtlı.", "soft");
+    var tb = $("gTbody"); tb.textContent = "";
+    j.items.forEach(function (x) {
+      var tr = el("tr");
+      tr.appendChild(el("td", x.ad, "m"));
+      tr.appendChild(el("td", Math.round(x.boyut * 0.75 / 1024) + " KB"));
+      tr.appendChild(el("td", tarih(x.guncelleme)));
+      var c = el("td"), b = el("button", "Sil", "o s");
+      b.onclick = function () { if (confirm(x.ad + " silinsin mi?")) api("/admin/api/varlik-sil", { ad: x.ad }).then(gListele); };
+      c.appendChild(b); tr.appendChild(c); tb.appendChild(tr);
+    });
+  });
+}
+
+$("girisBtn").onclick = giris;
+$("tok").onkeydown = function (e) { if (e.key === "Enter") giris(); };
+$("keygenBtn").onclick = keygen; $("olusturBtn").onclick = olustur;
+$("yenileBtn").onclick = listele; $("gYenile").onclick = gListele; $("yukleBtn").onclick = yukle;
+if (token) giris();
+</script>
+</body></html>
