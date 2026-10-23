@@ -1,0 +1,97 @@
+<!doctype html>
+<html lang="tr"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Axii — Durum Takip</title>
+<style>
+:root{color-scheme:dark light;--bg:#0e0d0a;--card:#16140e;--fg:#d6c79c;--soft:#a89a78;--acc:#f0c040;--bad:#e8604c;--ok:#7fc77f;--line:#2f2a1c;--inp:#1a1710}
+@media (prefers-color-scheme: light){:root{--bg:#f5f2ea;--card:#ffffff;--fg:#2b2616;--soft:#6b6048;--acc:#8a6200;--bad:#b3261e;--ok:#2e7d32;--line:#ddd6c2;--inp:#faf7ef}}
+*{box-sizing:border-box}
+body{margin:0;padding:16px;background:var(--bg);color:var(--fg);font:15px/1.45 "Segoe UI",system-ui,sans-serif}
+h1{font-size:20px;margin:0 0 12px;color:var(--acc)}
+.card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:14px;margin:0 0 14px;max-width:520px}
+input,button{font:inherit}
+input{background:var(--inp);color:var(--fg);border:1px solid var(--line);border-radius:6px;padding:7px 9px;width:100%;max-width:300px}
+button{background:var(--acc);color:#111;border:0;border-radius:6px;padding:7px 14px;cursor:pointer;font-weight:600;margin-left:6px}
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:6px 0}
+.msg{margin:8px 0;min-height:20px}
+.bad{color:var(--bad)}.ok{color:var(--ok)}.soft{color:var(--soft)}
+.durum{font-size:17px;margin:10px 0 4px}
+.satir{display:flex;justify-content:space-between;border-bottom:1px solid var(--line);padding:6px 0;font-size:14px}
+.satir span:first-child{color:var(--soft)}
+.gizli{display:none}
+.nokta{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:6px;vertical-align:middle}
+</style></head><body>
+<h1>Axii — Durum Takip</h1>
+
+<div class="card">
+  <div class="row">
+    <input id="key" placeholder="Lisans anahtarını yapıştır" autocomplete="off">
+    <button id="gitBtn">Göster</button>
+  </div>
+  <div class="msg" id="mesaj"></div>
+</div>
+
+<div class="card gizli" id="sonuc">
+  <div class="durum" id="durumBaslik"></div>
+  <div class="satir"><span>Lisans</span><span id="licDurum"></span></div>
+  <div class="satir"><span>Bitiş tarihi</span><span id="licBitis"></span></div>
+  <div class="satir"><span>Son güncelleme</span><span id="sonGuncelleme"></span></div>
+  <div class="msg soft" id="otoYenile"></div>
+</div>
+
+<script>
+var API_KOK = "https://axii-lisans.kamiltugceduran.workers.dev";
+function $(id){ return document.getElementById(id); }
+var zamanlayici = null;
+
+function yaz(el, metin, sinif){ el.textContent = metin; el.className = "msg " + (sinif || ""); }
+
+function gecenSureYaz(sn){
+  if (sn == null) return "—";
+  var fark = Math.floor(Date.now()/1000) - sn;
+  if (fark < 5) return "az önce";
+  if (fark < 60) return fark + " saniye önce";
+  if (fark < 3600) return Math.floor(fark/60) + " dakika önce";
+  if (fark < 86400) return Math.floor(fark/3600) + " saat önce";
+  return Math.floor(fark/86400) + " gün önce";
+}
+
+function sorgula(ilk){
+  var key = $("key").value.trim().toUpperCase();
+  if (!key) { yaz($("mesaj"), "Lisans anahtarını gir.", "bad"); return; }
+  if (ilk) yaz($("mesaj"), "Yükleniyor...", "soft");
+
+  fetch(API_KOK + "/v1/durum-sorgula?key=" + encodeURIComponent(key))
+    .then(function(r){ return r.json(); })
+    .then(function(j){
+      if (!j.ok) {
+        var mesajlar = { invalid_key: "Geçersiz lisans anahtarı.", bad_request: "Anahtar biçimi hatalı.", rate_limited: "Çok fazla deneme yapıldı, biraz bekle." };
+        yaz($("mesaj"), mesajlar[j.code] || ("Hata: " + j.code), "bad");
+        $("sonuc").classList.add("gizli");
+        return;
+      }
+      localStorage.setItem("axii_durum_key", key);
+      yaz($("mesaj"), "", "");
+      $("sonuc").classList.remove("gizli");
+
+      var dolmus = !j.aktif || (j.bitis && j.bitis < new Date(j.simdi * 1000).toISOString().slice(0,10));
+      $("licDurum").textContent = !j.aktif ? "İptal edilmiş" : (dolmus ? "Süresi dolmuş" : "Aktif");
+      $("licDurum").className = (!j.aktif || dolmus) ? "bad" : "ok";
+      $("licBitis").textContent = j.bitis || "—";
+
+      $("durumBaslik").innerHTML = '<span class="nokta" style="background:' + (j.metin ? "#7fc77f" : "#888") + '"></span>' + (j.metin || "Henüz bir durum bildirilmemiş.");
+      $("sonGuncelleme").textContent = gecenSureYaz(j.guncelleme);
+      $("otoYenile").textContent = "15 saniyede bir otomatik yenilenir.";
+    })
+    .catch(function(){ yaz($("mesaj"), "Sunucuya ulaşılamadı.", "bad"); });
+}
+
+$("gitBtn").onclick = function(){ sorgula(true); };
+$("key").onkeydown = function(e){ if (e.key === "Enter") sorgula(true); };
+
+var kayitliKey = localStorage.getItem("axii_durum_key");
+if (kayitliKey) { $("key").value = kayitliKey; sorgula(true); }
+
+zamanlayici = setInterval(function(){ if ($("key").value.trim()) sorgula(false); }, 15000);
+</script>
+</body></html>
