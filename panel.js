@@ -10,9 +10,9 @@ var Panel = (function () {
   // o.menu: [["id","Ad"],...]  o.alt: menü altına konacak HTML  o.ac: {id: görünüm açılınca çalışacak fonksiyon}
   function kur(o) {
     var ik = document.createElement("link"); ik.rel = "icon"; ik.href = IC; document.head.appendChild(ik);
-    $("side").innerHTML = '<div class="brand"><img src="' + IC + '" alt="">AXII</div><nav>' +
+    $("side").innerHTML = '<div class="brand"><img src="' + IC + '" alt="">Axii</div><nav>' +
       o.menu.map(function (m) { return '<a href="#' + m[0] + '" data-v="' + m[0] + '">' + m[1] + '</a>'; }).join("") +
-      '</nav><div class="sp"></div><div class="alt">' + (o.alt || "") + '<div style="margin-top:8px"><a href="' + PANEL_URL + '" target="_blank" rel="noopener">axiisoftware.github.io/axii-panel</a></div></div>';
+      '</nav><div class="sp"></div><div class="alt">' + (o.alt || "") + '</div>';
     function goster() {
       var v = location.hash.slice(1);
       if (!o.menu.some(function (m) { return m[0] === v; })) v = o.menu[0][0];

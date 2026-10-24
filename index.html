@@ -4,55 +4,172 @@
 <title>Axii Software</title>
 <link rel="stylesheet" href="panel.css">
 </head><body>
+
+<!-- Sağ üstte sabit hesap alanı -->
+<div class="hesap" id="hesap">
+  <button id="hGiris">Giriş yap</button><button id="hKayit" class="o">Kayıt ol</button>
+  <div id="hMenu" class="gizli" style="position:relative">
+    <button id="hKim" class="o"></button>
+    <div class="acilir gizli" id="hAcilir">
+      <a id="sifreLink">Şifre değiştir</a>
+      <a id="yonLink" href="yonetim.html" class="gizli">Yönetim paneli</a>
+      <a id="cikis">Çıkış yap</a>
+    </div>
+  </div>
+</div>
+
+<!-- Giriş / kayıt / şifre değiştirme: tek açılır pencere -->
+<div class="modal gizli" id="modal"><div class="mkutu">
+  <button class="x" id="mKapat" aria-label="Kapat">×</button>
+
+  <div data-m="giris">
+    <h3>Giriş yap</h3>
+    <div class="row"><input id="mgEp" type="email" placeholder="E-posta" autocomplete="username"></div>
+    <div class="row"><input id="mgSf" type="password" placeholder="Şifre" autocomplete="current-password"></div>
+    <div class="row"><button id="mgBtn">Giriş yap</button></div>
+    <div class="msg" id="mgMsg"></div>
+    <p class="alt-l">Hesabın yok mu? <a id="mgKayit">Kayıt ol</a></p>
+  </div>
+
+  <div data-m="kayit" class="gizli">
+    <h3>Kayıt ol</h3>
+    <div class="row"><input id="mkEp" type="email" placeholder="E-posta" autocomplete="username"></div>
+    <div class="row"><input id="mkSf" type="password" placeholder="Şifre (en az 8 karakter)" autocomplete="new-password"></div>
+    <div class="row"><input id="mkKey" placeholder="Lisans anahtarı" autocomplete="off"></div>
+    <p class="s" style="margin:6px 0;font-size:13px">Hesabın, yönetici onayından sonra aktif olur.</p>
+    <div class="row"><button id="mkBtn">Kayıt ol</button></div>
+    <div class="msg" id="mkMsg"></div>
+    <p class="alt-l">Hesabın var mı? <a id="mkGiris">Giriş yap</a></p>
+  </div>
+
+  <div data-m="sifre" class="gizli">
+    <h3>Şifre değiştir</h3>
+    <p class="s gizli" id="msZor" style="margin:0 0 8px;font-size:13px">Yönetici geçici bir şifre verdi. Devam etmeden önce yeni bir şifre belirle.</p>
+    <div class="row"><input id="msEski" type="password" placeholder="Mevcut şifre" autocomplete="current-password"></div>
+    <div class="row"><input id="msYeni" type="password" placeholder="Yeni şifre (en az 8 karakter)" autocomplete="new-password"></div>
+    <div class="row"><button id="msBtn">Kaydet</button></div>
+    <div class="msg" id="msMsg"></div>
+  </div>
+</div></div>
+
 <div class="w">
   <aside class="side" id="side"></aside>
   <main class="main">
 
     <section data-s="ana">
       <h2>Axii Software</h2>
-      <p class="s">Lisans ve cihaz durumu paneli.</p>
-      <div class="card">
-        <h3>Bu panelde neler var?</h3>
-        <div class="kv"><span>Durum takip</span><span>Hesabınla giriş yapıp otomasyonun o anki durumunu görürsün.</span></div>
-        <div class="kv"><span>Birden fazla bilgisayar</span><span>Lisansına bağlı her bilgisayar ayrı listelenir.</span></div>
-        <div class="kv"><span>Ekran görüntüsü</span><span>İstediğin bilgisayarın client görüntüsünü anlık alabilirsin.</span></div>
+      <p class="s">Canlı Takip ve Lisans İşlemleri Paneli</p>
+
+      <div class="card guide">
+        <h3>Axii Software nedir?</h3>
+        <p>Temeli görüntü işlemeye dayanan, stabil çalışan ve kullanımı kolay bir Metin2 makrosudur. Size zaman kazandırmak amacıyla geliştirilmiştir ve genel olarak otomatik av altı kullanıma yöneliktir.</p>
+
+        <h3>Arayüze genel bakış</h3>
+        <figure class="fig" id="figArayuz">
+          <svg viewBox="0 0 584 484" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Axii Software arayüz haritası"><rect class="sv-b" x="0" y="0" width="584" height="22" rx="3"/><text class="sv-t" x="10" y="15" text-anchor="start">Seçenekler</text><circle class="sv-a" cx="80" cy="11" r="9"/><text class="sv-n" x="80" y="14.5" text-anchor="middle">1</text><rect class="sv-b" x="14" y="30" width="280" height="22" rx="3"/><text class="sv-t" x="22" y="45" text-anchor="start">Durum: Hazır</text><circle class="sv-a" cx="284" cy="41" r="9"/><text class="sv-n" x="284" y="44.5" text-anchor="middle">2</text><rect class="sv-b" x="300" y="30" width="140" height="22" rx="3"/><text class="sv-r" x="310" y="45" text-anchor="start">Client Seç</text><circle class="sv-a" cx="430" cy="41" r="9"/><text class="sv-n" x="430" y="44.5" text-anchor="middle">3</text><rect class="sv-b" x="464" y="30" width="85" height="22" rx="3"/><text class="sv-t" x="472" y="45" text-anchor="start">Destek</text><rect class="sv-b" x="548" y="30" width="22" height="22" rx="3"/><text class="sv-t" x="559" y="45" text-anchor="middle">i</text><rect class="sv-b" x="14" y="60" width="136" height="26" rx="3"/><text class="sv-t" x="82" y="77" text-anchor="middle">Görev Kitabı</text><rect class="sv-b" x="154" y="60" width="136" height="26" rx="3"/><text class="sv-t" x="222" y="77" text-anchor="middle">Enerji Parçası Üretim</text><rect class="sv-b" x="294" y="60" width="136" height="26" rx="3"/><text class="sv-t" x="362" y="77" text-anchor="middle">Okey Kart Seti Üretim</text><rect class="sv-b" x="434" y="60" width="136" height="26" rx="3"/><text class="sv-t" x="502" y="77" text-anchor="middle">Lonca Puan Üretim</text><circle class="sv-a" cx="562" cy="73" r="9"/><text class="sv-n" x="562" y="76.5" text-anchor="middle">4</text><text class="sv-t" x="198" y="106" text-anchor="start">Bilgi</text><text class="sv-s" x="250" y="106" text-anchor="start">Hız</text><text class="sv-s" x="290" y="106" text-anchor="start">Efsun Koruma</text><text class="sv-s" x="375" y="106" text-anchor="start">Enerji Kristali Üretim</text><rect class="sv-a" x="198" y="112" width="40" height="2"/><circle class="sv-a" cx="560" cy="102" r="9"/><text class="sv-n" x="560" y="105.5" text-anchor="middle">5</text><rect class="sv-d" x="14" y="126" width="172" height="300" rx="3"/><circle class="sv-b" cx="100" cy="206" r="46"/><text class="sv-t" x="100" y="210" text-anchor="middle">Başlat</text><text class="sv-t" x="100" y="296" text-anchor="middle">Başarılı İşlem Sayacı: 0</text><text class="sv-s" x="100" y="316" text-anchor="middle">Çalışma süresi</text><circle class="sv-a" cx="30" cy="142" r="9"/><text class="sv-n" x="30" y="145.5" text-anchor="middle">6</text><rect class="sv-d" x="198" y="126" width="372" height="300" rx="3"/><text class="sv-s" x="384" y="270" text-anchor="middle">Seçili sekmenin içeriği</text><text class="sv-s" x="384" y="286" text-anchor="middle">(bilgi yazısı, hız, seçenekler…)</text><circle class="sv-a" cx="552" cy="142" r="9"/><text class="sv-n" x="552" y="145.5" text-anchor="middle">7</text><rect class="sv-b" x="14" y="436" width="12" height="12" rx="3"/><text class="sv-t" x="34" y="446" text-anchor="start">Otomatik Yeniden Bağlan</text><rect class="sv-b" x="210" y="436" width="12" height="12" rx="3"/><text class="sv-t" x="230" y="446" text-anchor="start">Otomatik Yeniden Bağlan + Otomatik Av Aktif Et</text><rect class="sv-b" x="14" y="460" width="12" height="12" rx="3"/><text class="sv-t" x="34" y="470" text-anchor="start">Otomatik Toplama Aktif Et</text><circle class="sv-a" cx="562" cy="452" r="9"/><text class="sv-n" x="562" y="455.5" text-anchor="middle">8</text></svg>
+          <figcaption>Uygulamanın ana ekranı (şematik gösterim).</figcaption>
+        </figure>
+        <ul>
+          <li><b>1 · Seçenekler menüsü:</b> Bilgi, İstatistik ve İletişim.</li>
+          <li><b>2 · Durum satırı:</b> Otomasyonun şu an ne yaptığını gösterir.</li>
+          <li><b>3 · Client Seç ve Destek:</b> Çalışılacak oyun penceresini seçersin, Destek’ten iletişim bilgilerine ulaşırsın.</li>
+          <li><b>4 · Otomasyon seçimi:</b> Çalıştırmak istediğin sistemi buradan seçersin.</li>
+          <li><b>5 · Alt sekmeler:</b> Seçili sistemin bilgi yazısı ve ayarları.</li>
+          <li><b>6 · Başlat / Durdur:</b> Sol sütundaki düğme, sayaç ve çalışma süresi.</li>
+          <li><b>7 · Ayarlar:</b> Seçili sekmenin içeriği.</li>
+          <li><b>8 · Ortak seçenekler:</b> Yeniden bağlanma ve otomatik toplama.</li>
+        </ul>
+
+        <h3>Otomasyonlar</h3>
+        <p>Bir otomasyon seçip nasıl çalıştığını ve nelere dikkat etmen gerektiğini oku.</p>
+        <div class="chips" id="otoChips">
+          <button class="o on" data-k="mc">Görev Kitabı</button>
+          <button class="o" data-k="oto">Enerji Parçası Üretim</button>
+          <button class="o" data-k="mr">Okey Kart Seti Üretim</button>
+          <button class="o" data-k="ln">Lonca Puan Üretim</button>
+        </div>
+        <div class="ozel oto-p" data-k="mc">
+          <p><b>Görev Kitabı</b> · Görev Kitabı Prens (2 ve 3) otomasyonudur.</p>
+          <p><b>Çalışma mantığı:</b> Seçtiğin görev kitabına sağ tıklayarak istediğin görev gelene kadar görevi yeniler, doğru görevi bulunca bitirir ve aynı işlemi tekrarlar.</p>
+          <p><b>Dikkat edilecekler:</b></p>
+          <ul><li>Görüntü ayarları ölçek ve düzen %100 olmalı.</li><li>Oyun çözünürlüğü minimum 1024x768 olmalı.</li><li>Yapılacak görev kitapları 1. envanterde olmalı.</li></ul>
+          <p><b>Sekmeler:</b> Bilgi · Görev Kitabı (Prens 2 / Prens 3 seçimi) · Görevler (hangi görevlerin yapılacağı) · Hız</p>
+        </div>
+        <div class="ozel oto-p gizli" data-k="oto">
+          <p><b>Enerji Parçası Üretim</b> · Enerji parçası ve enerji kristali üretim otomasyonudur.</p>
+          <p><b>Çalışma mantığı:</b> 2, 3 ve 4. envanterlerdeki yeni itemleri takip eder, efsun koruması uygular ve büyülü çekiçle üretim yapar. Enerji Kristali Üretim sekmesi, Simyacı’dan kristal üretimini sürekli tekrarlar.</p>
+          <p><b>Dikkat edilecekler:</b></p>
+          <ul><li>Görüntü ayarları ölçek ve düzen %100 olmalı.</li><li>Oyun çözünürlüğü minimum 1024x768 olmalı.</li><li>Büyülü çekiçler 1. envanterde olmalı.</li><li>Enerji Kristali Üretim için YZK isimleri açık, karakter Simyacı’nın yanında olmalı. Her kristal 30 enerji parçası ve 1.000 Yang gerektirir.</li></ul>
+          <p><b>Sekmeler:</b> Bilgi · Hız · Efsun Koruma · Enerji Kristali Üretim</p>
+        </div>
+        <div class="ozel oto-p gizli" data-k="mr">
+          <p><b>Okey Kart Seti Üretim</b> · Okey Kart Seti oynama otomasyonudur.</p>
+          <p><b>Çalışma mantığı:</b> Okey etkinliğini baştan sona kendisi oynar ve kart seti üretimini tekrarlar.</p>
+          <p><b>Dikkat edilecekler:</b></p>
+          <ul><li>Görüntü ayarları ölçek ve düzen %100 olmalı.</li><li>Oyun çözünürlüğü minimum 1024x768 olmalı.</li></ul>
+          <p><b>Sekmeler:</b> Bilgi · Hız</p>
+        </div>
+        <div class="ozel oto-p gizli" data-k="ln">
+          <p><b>Lonca Puan Üretim</b> <span class="soft">(Deneysel)</span> · Birden çok hesap ve karakterle günlük lonca katılımı ile exp/yang bağışı yaparak lonca puanı üretir.</p>
+          <p><b>Çalışma mantığı:</b> Kayıtlı hesapları sırayla açar. İşaretli her karakterle oyuna girip günlük katılım, exp ve yang bağışını yapar, sonra sıradaki karaktere geçer. Son karakterden sonra oyundan çıkıp sıradaki hesaba geçer, son hesap bitince durur.</p>
+          <p><b>Dikkat edilecekler:</b></p>
+          <ul><li>Görüntü ayarları ölçek ve düzen %100 olmalı.</li><li>Oyun çözünürlüğü minimum 1024x768 olmalı.</li><li>Gameforge Client açık ve hesabınla giriş yapılmış olmalı.</li><li>Hesap sekmesinde hesap adını yazıp Enter’a bas, listeden hesabı seçip işlem yapılacak karakterleri işaretle.</li></ul>
+          <p><b>Sekmeler:</b> Bilgi · Hesap · Hız</p>
+        </div>
+
+        <h3>Lisans sistemi</h3>
+        <ul>
+          <li>Uygulama açılırken lisans anahtarını girersin. Doğrulanınca uygulama açılır ve anahtar bir sonraki açılış için hatırlanır.</li>
+          <li>Lisansın bir bitiş tarihi ve cihaz limiti vardır. Aynı anahtarla limit kadar bilgisayarda çalışabilirsin.</li>
+          <li>Süre bitimine 7 gün ya da daha az kaldığında giriş ekranında uyarı görürsün.</li>
+          <li>Yeni sürüm yayınlandığında uygulama açılırken sana sorar. Onaylarsan kendini günceller.</li>
+        </ul>
+
+        <h3>Seçenekler menüsü</h3>
+        <ul>
+          <li><b>Bilgi:</b> Uygulama hakkında kısa bilgi.</li>
+          <li><b>İstatistik:</b> Bir sistem seçip son 24 saat, 1 hafta ya da 1 ay için oturum sayısını, toplam çalışma süresini, işlem sayısını ve saatlik ortalamayı görürsün.</li>
+          <li><b>İletişim:</b> İletişim bilgileri.</li>
+        </ul>
+
+        <h3>Client Seç</h3>
+        <p>Ekranın üst satırındaki <b>Client Seç</b> ile açık oyun pencerelerinden otomasyonun çalışacağı pencereyi seçersin, yanındaki ✕ ile seçimi kaldırırsın. Seçtiğin pencere, Canlı Takip’teki ekran görüntüsünün de kaynağıdır. Seçili değilken yazı kırmızı, seçiliyken mavidir.</p>
+
+        <h3>Ortak sistemler</h3>
+        <ul>
+          <li><b>Başlat / Durdur ve sayaçlar:</b> Sol sütundaki düğme seçili otomasyonu başlatır ve durdurur. Başarılı İşlem Sayacı ve çalışma süresi burada görünür. Enerji Parçası Üretim’de ayrıca yakalanan efsunlu item sayısı da sayılır.</li>
+          <li><b>Otomatik Yeniden Bağlan:</b> Bağlantı koparsa oyuna yeniden bağlanır. “+ Otomatik Av Aktif Et” seçeneği, yeniden bağlandıktan sonra otomatik avı da açar. İki seçenek birlikte işaretlenemez ve otomasyon çalışırken değiştirilemez.</li>
+          <li><b>Otomatik Toplama Aktif Et:</b> Hangi otomasyon seçiliyse Başlat’a bastığında onunla birlikte devreye girer. Tüm otomasyonlarda ortak çalışır.</li>
+          <li><b>Destek:</b> Üst satırdaki Destek düğmesinin yanındaki ⓘ iletişim bilgilerini açar.</li>
+        </ul>
+
+        <h3>Canlı Takip’te neleri izlersin?</h3>
+        <ul>
+          <li>Lisansının durumu ve bitiş tarihi.</li>
+          <li>Lisansına bağlı her bilgisayarın ayrı kartı ve otomasyonun şu anki durumu.</li>
+          <li>Client’ın açık ya da kapalı olduğu.</li>
+          <li>İstediğin bilgisayarın anlık ekran görüntüsü.</li>
+          <li>Her bilgisayarın 24 saat, 1 hafta ve 1 aylık istatistikleri.</li>
+        </ul>
       </div>
+
       <div class="card">
-        <h3>Lisans ve destek</h3>
-        <p class="s">Lisans, süre uzatma ve cihaz sıfırlama için uygulamadaki Seçenekler > İletişim bölümünü kullanabilirsin.</p>
-        <a class="btn" href="#durum">Durum takibine git</a>
+        <h3>Lisans ve Destek</h3>
+        <p class="s">Lisans, süre uzatma, cihaz sıfırlama, bug bildirimi gibi işlemler için: <a href="mailto:axiisoftwaresystems@gmail.com" style="color:var(--acc)">axiisoftwaresystems@gmail.com</a></p>
+        <a class="btn" href="#durum">Canlı Takip Paneline Geç</a>
       </div>
     </section>
 
     <section data-s="durum" hidden>
-      <h2>Durum takip</h2>
-      <p class="s">Hesabınla giriş yaparak bilgisayarlarını ve otomasyon durumunu görüntüle.</p>
-
-      <div class="card" id="girisKart">
-        <div class="row">
-          <button id="tGiris">Giriş yap</button><button id="tKayit" class="o">Kayıt ol</button>
-        </div>
-        <div class="row"><input id="eposta" type="email" placeholder="E-posta" autocomplete="username" style="min-width:260px"></div>
-        <div class="row"><input id="sifre" type="password" placeholder="Şifre" autocomplete="current-password" style="min-width:260px"></div>
-        <div class="row gizli" id="keyRow"><input id="key" placeholder="Lisans anahtarı" autocomplete="off" style="min-width:260px"></div>
-        <p class="s gizli" id="kayitNot" style="margin:6px 0">Hesabın, yönetici onayından sonra aktif olur. Şifre en az 8 karakter olmalı.</p>
-        <div class="row"><button id="formBtn">Giriş yap</button></div>
-        <div class="msg" id="mesaj"></div>
-      </div>
-
-      <div class="card gizli" id="sifreKart">
-        <h3>Şifre değiştir</h3>
-        <p class="s gizli" id="sifreZorunlu" style="margin:0 0 8px">Yönetici geçici bir şifre verdi. Devam etmeden önce yeni bir şifre belirle.</p>
-        <div class="row"><input id="eskiS" type="password" placeholder="Mevcut şifre" autocomplete="current-password"></div>
-        <div class="row"><input id="yeniS" type="password" placeholder="Yeni şifre (en az 8 karakter)" autocomplete="new-password"></div>
-        <div class="row"><button id="sifreBtn">Kaydet</button><button id="sifreIptal" class="o">Vazgeç</button></div>
-        <div class="msg" id="sifreMsg"></div>
-      </div>
+      <h2>Canlı Takip</h2>
+      <p class="s">Axii Software, temeli görüntü işlemeye dayanan, stabil çalışan ve kullanımı kolay bir Metin2 makrosudur. Size zaman kazandırmak amacıyla geliştirilmiştir ve genel olarak otomatik av altı kullanıma yöneliktir.</p>
+      <div class="msg soft" id="girisIpucu">Canlı Takip için sağ üstten giriş yap.</div>
 
       <div class="card gizli" id="sonuc">
         <div class="kv"><span>Lisans</span><span id="lic"></span></div>
         <div class="kv"><span>Bitiş tarihi</span><span id="bitis"></span></div>
-        <div class="kv"><span>Kayıtlı bilgisayar</span><span id="cihazSay"></span></div>
+        <div class="kv"><span>Client</span><span id="cliDurum"></span></div>
+        <div class="row" style="margin-top:12px"><button class="o" id="yenidenAc">Clienti Yeniden Aç</button></div>
       </div>
 
       <div id="cihazlar"></div>
@@ -72,8 +189,8 @@
 <script src="panel.js"></script>
 <script>
 var P = Panel, $ = P.$;
-var gZam = null, gBitis = 0, gCihaz = null, kayitModu = false, profil = null;
-var kartlar = {};   // cihaz kimliği -> {kok, nokta, metin, zaman, btn}
+var gZam = null, gBitis = 0, gCihaz = null, profil = null, mZor = false;
+var kartlar = {};   // cihaz kimliği -> kart öğeleri
 
 function gec(sn) {
   if (sn == null) return "—";
@@ -85,8 +202,24 @@ function gec(sn) {
   return Math.floor(f / 86400) + " gün önce";
 }
 function oturum() { return localStorage.getItem(P.TK) || ""; }
+function sure(sn) { var sa = Math.floor(sn / 3600), dk = Math.floor(sn % 3600 / 60); return (sa > 0 ? sa + " sa " : "") + dk + " dk"; }
 
-// ---- Giriş / kayıt ----
+// ---- Ana sayfa: otomasyon seçici ----
+document.querySelectorAll("#otoChips button").forEach(function (b) {
+  b.onclick = function () {
+    document.querySelectorAll("#otoChips button").forEach(function (x) { x.classList.toggle("on", x === b); });
+    document.querySelectorAll(".oto-p").forEach(function (p) { p.classList.toggle("gizli", p.dataset.k !== b.dataset.k); });
+  };
+});
+// img/arayuz.png eklenirse şematik görselin yerine gerçek ekran görüntüsü gösterilir
+(function () {
+  var f = $("figArayuz"), im = new Image();
+  im.alt = "Axii Software ana ekranı";
+  im.onload = function () { var sv = f.querySelector("svg"); if (sv) sv.replaceWith(im); };
+  im.src = "img/arayuz.png";
+})();
+
+// ---- Hesap: açılır pencereler ----
 var HATA = {
   bad_credentials: "E-posta ya da şifre hatalı.", pending: "Hesabın yönetici onayı bekliyor. Onaylanınca giriş yapabilirsin.",
   rate_limited: "Çok fazla deneme yapıldı, biraz bekle.", bad_email: "E-posta adresi geçersiz.",
@@ -94,68 +227,87 @@ var HATA = {
   expired: "Lisans süresi dolmuş.", key_taken: "Bu lisans anahtarı başka bir hesaba bağlı.", email_taken: "Bu e-posta ile zaten bir hesap var.",
   bad_request: "Girdiğin bilgileri kontrol et.", no_key: "Hesabına bağlı bir lisans anahtarı yok."
 };
-function modSec(kayit) {
-  kayitModu = kayit;
-  $("keyRow").classList.toggle("gizli", !kayit); $("kayitNot").classList.toggle("gizli", !kayit);
-  $("formBtn").textContent = kayit ? "Kayıt ol" : "Giriş yap";
-  $("tGiris").className = kayit ? "o" : ""; $("tKayit").className = kayit ? "" : "o";
-  $("sifre").autocomplete = kayit ? "new-password" : "current-password";
-  P.yaz($("mesaj"), "", "");
+function modalAc(v, zor) {
+  mZor = !!zor; $("modal").classList.remove("gizli"); $("hAcilir").classList.add("gizli");
+  ["giris", "kayit", "sifre"].forEach(function (x) { document.querySelector('[data-m="' + x + '"]').classList.toggle("gizli", x !== v); });
+  $("mKapat").classList.toggle("gizli", mZor); $("msZor").classList.toggle("gizli", !mZor);
+  ["mgMsg", "mkMsg", "msMsg"].forEach(function (i) { P.yaz($(i), "", ""); });
+  var f = { giris: "mgEp", kayit: "mkEp", sifre: "msEski" }[v];
+  setTimeout(function () { $(f).focus(); }, 30);
 }
-function formGonder() {
-  var e = $("eposta").value.trim(), p = $("sifre").value;
-  if (!e || !p) { P.yaz($("mesaj"), "E-posta ve şifreyi gir.", "bad"); return; }
-  $("formBtn").disabled = true; P.yaz($("mesaj"), "Gönderiliyor...", "soft");
-  var istek = kayitModu
-    ? P.api("/v1/uye/kayit", { eposta: e, sifre: p, key: $("key").value.trim().toUpperCase() }, "")
-    : P.api("/v1/uye/giris", { eposta: e, sifre: p }, "");
-  istek.then(function (j) {
-    $("formBtn").disabled = false;
-    if (!j.ok) { P.yaz($("mesaj"), HATA[j.code] || ("Hata: " + (j.code || j._status)), "bad"); return; }
-    $("sifre").value = "";
-    if (kayitModu) { modSec(false); P.yaz($("mesaj"), "Kayıt alındı. Yönetici onayından sonra giriş yapabilirsin.", "ok"); return; }
-    localStorage.setItem(P.TK, j.token);
-    profil = j; acik();
-  }).catch(function () { $("formBtn").disabled = false; P.yaz($("mesaj"), "Sunucuya ulaşılamadı.", "bad"); });
+function modalKapat() { if (!mZor) $("modal").classList.add("gizli"); }
+$("mKapat").onclick = modalKapat;
+$("modal").onclick = function (e) { if (e.target === this) modalKapat(); };
+document.addEventListener("keydown", function (e) { if (e.key === "Escape") { modalKapat(); $("hAcilir").classList.add("gizli"); } });
+document.addEventListener("click", function (e) { if (!$("hMenu").contains(e.target)) $("hAcilir").classList.add("gizli"); });
+$("hGiris").onclick = function () { modalAc("giris"); };
+$("hKayit").onclick = function () { modalAc("kayit"); };
+$("mgKayit").onclick = function () { modalAc("kayit"); };
+$("mkGiris").onclick = function () { modalAc("giris"); };
+$("hKim").onclick = function () { $("hAcilir").classList.toggle("gizli"); };
+$("sifreLink").onclick = function () { modalAc("sifre", false); };
+
+function girisGonder() {
+  var e = $("mgEp").value.trim(), p = $("mgSf").value;
+  if (!e || !p) { P.yaz($("mgMsg"), "E-posta ve şifreyi gir.", "bad"); return; }
+  $("mgBtn").disabled = true; P.yaz($("mgMsg"), "Giriş yapılıyor...", "soft");
+  P.api("/v1/uye/giris", { eposta: e, sifre: p }, "").then(function (j) {
+    $("mgBtn").disabled = false;
+    if (!j.ok) { P.yaz($("mgMsg"), HATA[j.code] || ("Hata: " + (j.code || j._status)), "bad"); return; }
+    $("mgSf").value = ""; localStorage.setItem(P.TK, j.token);
+    mZor = false; $("modal").classList.add("gizli"); acik();
+  }).catch(function () { $("mgBtn").disabled = false; P.yaz($("mgMsg"), "Sunucuya ulaşılamadı.", "bad"); });
 }
-function girisGoster() {
+function kayitGonder() {
+  var e = $("mkEp").value.trim(), p = $("mkSf").value, k = $("mkKey").value.trim().toUpperCase();
+  if (!e || !p || !k) { P.yaz($("mkMsg"), "Tüm alanları doldur.", "bad"); return; }
+  $("mkBtn").disabled = true; P.yaz($("mkMsg"), "Gönderiliyor...", "soft");
+  P.api("/v1/uye/kayit", { eposta: e, sifre: p, key: k }, "").then(function (j) {
+    $("mkBtn").disabled = false;
+    if (!j.ok) { P.yaz($("mkMsg"), HATA[j.code] || ("Hata: " + (j.code || j._status)), "bad"); return; }
+    $("mkSf").value = ""; $("mkKey").value = "";
+    modalAc("giris"); $("mgEp").value = e; P.yaz($("mgMsg"), "Kayıt alındı. Yönetici onayından sonra giriş yapabilirsin.", "ok");
+  }).catch(function () { $("mkBtn").disabled = false; P.yaz($("mkMsg"), "Sunucuya ulaşılamadı.", "bad"); });
+}
+function sifreKaydet() {
+  P.yaz($("msMsg"), "Kaydediliyor...", "soft");
+  P.api("/v1/uye/sifre", { eski: $("msEski").value, yeni: $("msYeni").value }).then(function (j) {
+    if (!j.ok) { P.yaz($("msMsg"), j.code === "bad_credentials" ? "Mevcut şifre yanlış." : (HATA[j.code] || ("Hata: " + j.code)), "bad"); return; }
+    $("msEski").value = ""; $("msYeni").value = ""; mZor = false; $("modal").classList.add("gizli");
+    if (profil) profil.degistir = false; sorgula(true);
+  });
+}
+$("mgBtn").onclick = girisGonder; $("mkBtn").onclick = kayitGonder; $("msBtn").onclick = sifreKaydet;
+[["mgEp", girisGonder], ["mgSf", girisGonder], ["mkEp", kayitGonder], ["mkSf", kayitGonder], ["mkKey", kayitGonder], ["msEski", sifreKaydet], ["msYeni", sifreKaydet]].forEach(function (x) {
+  $(x[0]).onkeydown = function (e) { if (e.key === "Enter") x[1](); };
+});
+
+function girisGoster(ipucu) {
   profil = null; gKapatYerel(); kartlar = {};
-  ["sonuc", "sifreKart", "gKart"].forEach(function (i) { $(i).classList.add("gizli"); });
+  ["sonuc", "gKart"].forEach(function (i) { $(i).classList.add("gizli"); });
   $("cihazlar").textContent = ""; P.yaz($("gMsg"), "", "");
-  $("girisKart").classList.remove("gizli"); $("cikis").classList.add("gizli"); $("sifreLink").classList.add("gizli"); $("kim").textContent = ""; $("yonLink").classList.add("gizli");
+  $("hGiris").classList.remove("gizli"); $("hKayit").classList.remove("gizli"); $("hMenu").classList.add("gizli"); $("hAcilir").classList.add("gizli");
+  $("yonLink").classList.add("gizli"); $("girisIpucu").classList.remove("gizli"); $("girisIpucu").textContent = ipucu || "Canlı Takip için sağ üstten giriş yap.";
 }
 function cikis() {
   var t = oturum(); localStorage.removeItem(P.TK);
   if (t) P.api("/v1/uye/cikis", {}, t).catch(function () {});
-  girisGoster(); P.yaz($("mesaj"), "Çıkış yapıldı.", "soft"); location.hash = "#ana";
+  girisGoster("Çıkış yapıldı."); location.hash = "#ana";
 }
+$("cikis").onclick = cikis;
 
-// ---- Şifre değiştir ----
-function sifreFormu(zorunlu) {
-  $("sifreKart").classList.remove("gizli"); $("sifreZorunlu").classList.toggle("gizli", !zorunlu);
-  $("sifreIptal").classList.toggle("gizli", !!zorunlu); P.yaz($("sifreMsg"), "", "");
-}
-function sifreKaydet() {
-  P.yaz($("sifreMsg"), "Kaydediliyor...", "soft");
-  P.api("/v1/uye/sifre", { eski: $("eskiS").value, yeni: $("yeniS").value }).then(function (j) {
-    if (!j.ok) { P.yaz($("sifreMsg"), j.code === "bad_credentials" ? "Mevcut şifre yanlış." : (HATA[j.code] || ("Hata: " + j.code)), "bad"); return; }
-    $("eskiS").value = ""; $("yeniS").value = ""; $("sifreKart").classList.add("gizli");
-    if (profil) profil.degistir = false; sorgula(true);
-  });
-}
-
-// ---- Oturum açıksa profili al, paneli göster ----
+// Oturum açıksa profili al, hesap alanını ve paneli göster
 function acik() {
   if (!oturum()) { girisGoster(); return; }
   P.api("/v1/uye/ben").then(function (j) {
-    if (!j.ok) { localStorage.removeItem(P.TK); girisGoster(); if (j.code === "unauthorized") P.yaz($("mesaj"), "Oturum süresi doldu, tekrar giriş yap.", "soft"); return; }
+    if (!j.ok) { localStorage.removeItem(P.TK); girisGoster(j.code === "unauthorized" ? "Oturum süresi doldu, tekrar giriş yap." : ""); return; }
     profil = j;
-    $("girisKart").classList.add("gizli"); P.yaz($("mesaj"), "", "");
-    $("kim").textContent = j.eposta; $("cikis").classList.remove("gizli"); $("sifreLink").classList.remove("gizli");
-    $("yonLink").classList.toggle("gizli", j.rol !== "admin");
-    if (j.degistir) { sifreFormu(true); return; }
+    $("hGiris").classList.add("gizli"); $("hKayit").classList.add("gizli"); $("hMenu").classList.remove("gizli");
+    $("hKim").textContent = j.eposta; $("hKim").title = j.eposta; $("yonLink").classList.toggle("gizli", j.rol !== "admin");
+    $("girisIpucu").classList.add("gizli");
+    if (j.degistir) { modalAc("sifre", true); return; }
     sorgula(true);
-  }).catch(function () { P.yaz($("mesaj"), "Sunucuya ulaşılamadı.", "bad"); $("girisKart").classList.remove("gizli"); });
+  }).catch(function () { P.yaz($("gMsg"), "Sunucuya ulaşılamadı.", "bad"); });
 }
 
 // ---- Durum ----
@@ -163,7 +315,7 @@ function sorgula(ilk) {
   if (!oturum()) return;
   if (ilk) P.yaz($("gMsg"), "", "");
   P.api("/v1/uye/durum").then(function (j) {
-    if (j._status === 401) { localStorage.removeItem(P.TK); girisGoster(); P.yaz($("mesaj"), "Oturum süresi doldu, tekrar giriş yap.", "soft"); return; }
+    if (j._status === 401) { localStorage.removeItem(P.TK); girisGoster("Oturum süresi doldu, tekrar giriş yap."); return; }
     if (!j.ok) {
       var m = { invalid_key: "Geçersiz lisans anahtarı.", inactive: "Bu lisans devre dışı.", expired: "Lisans süresi dolmuş.", rate_limited: "Çok fazla istek gönderildi, biraz bekle.", no_key: "Hesabına bağlı bir lisans anahtarı yok." };
       P.yaz($("gMsg"), m[j.code] || ("Hata: " + j.code), "bad"); $("sonuc").classList.add("gizli"); $("cihazlar").textContent = ""; kartlar = {}; return;
@@ -173,9 +325,48 @@ function sorgula(ilk) {
     $("lic").textContent = !j.aktif ? "İptal edilmiş" : (dolmus ? "Süresi dolmuş" : "Aktif");
     $("lic").className = (!j.aktif || dolmus) ? "bad" : "ok";
     $("bitis").textContent = j.bitis || "—";
-    $("cihazSay").textContent = j.cihazlar.length + " / " + j.cihaz_limiti;
+    var n = j.cihazlar.length, kapali = j.cihazlar.filter(function (c) { return kapaliMi(c, j.simdi); }).length, cd = $("cliDurum");
+    cd.textContent = !n ? "—" : (kapali === 0 ? "Açık" : (kapali === n ? "Client kapalı" : kapali + " / " + n + " bilgisayarda client kapalı"));
+    cd.className = !n ? "" : (kapali === 0 ? "ok" : "bad");
     cihazlariCiz(j.cihazlar, j.simdi);
   }).catch(function () { P.yaz($("gMsg"), "Sunucuya ulaşılamadı.", "bad"); });
+}
+function kapaliMi(c, simdi) { return c.guncelleme == null || (simdi - c.guncelleme) > 180; }
+
+// ---- İstatistik (uygulamadaki Seçenekler > İstatistik ile aynı sistemler) ----
+var IST = [
+  ["MC", "Görev Kitabı", ["Tamamlanan görev", "İptal", "Bağlantı kopması"]],
+  ["OTO", "Enerji Parçası Üretim", ["Başarılı işlem", "Yakalanan efsun", "Bağlantı kopması"]],
+  ["ML", "Enerji Kristali Üretim", ["Üretilen kristal"]],
+  ["MR", "Okey Kart Seti Üretim", ["Tamamlanan oyun"]],
+  ["LN", "Lonca Puan Üretim", ["Tamamlanan karakter"]]
+];
+var DONEM = ["Son 24 saat", "Son 1 hafta", "Son 1 ay"];
+function istCiz(k) {
+  var kap = k.ist; kap.textContent = "";
+  var bar = P.el("div", "", "row");
+  DONEM.forEach(function (ad, i) {
+    var b = P.el("button", ad, "o s" + (i === k.donem ? " on" : ""));
+    b.onclick = function () { k.donem = i; istCiz(k); };
+    bar.appendChild(b);
+  });
+  kap.appendChild(bar);
+  if (!k.veri) { kap.appendChild(P.el("div", "Bu bilgisayardan henüz istatistik gelmedi.", "msg soft")); return; }
+  var tb = P.el("tbody"), sat = 0;
+  IST.forEach(function (s) {
+    var d = k.veri[s[0]] && k.veri[s[0]][k.donem];
+    if (!d || !d[0]) return;
+    sat++;
+    var tr = P.el("tr"), parca = s[2].map(function (ad, i) { return ad + ": " + d[2 + i]; });
+    if (d[1] >= 60) parca.push("saatte ort. " + (d[2] / (d[1] / 3600)).toFixed(1));
+    tr.appendChild(P.el("td", s[1])); tr.appendChild(P.el("td", String(d[0]))); tr.appendChild(P.el("td", sure(d[1]))); tr.appendChild(P.el("td", parca.join(" · ")));
+    tb.appendChild(tr);
+  });
+  if (!sat) { kap.appendChild(P.el("div", DONEM[k.donem] + " içinde kayıtlı oturum yok.", "msg soft")); return; }
+  var tbl = P.el("table", "", "it"), th = P.el("thead"), hr = P.el("tr");
+  ["Sistem", "Oturum", "Süre", "Sonuçlar"].forEach(function (h) { hr.appendChild(P.el("th", h)); });
+  th.appendChild(hr); tbl.appendChild(th); tbl.appendChild(tb);
+  var w = P.el("div", "", "tw"); w.appendChild(tbl); kap.appendChild(w);
 }
 
 function cihazlariCiz(liste, simdi) {
@@ -191,26 +382,39 @@ function cihazlariCiz(liste, simdi) {
     gelen[c.id] = true;
     var k = kartlar[c.id];
     if (!k) {
-      k = { kok: P.el("div", "", "card"), ust: P.el("div", "", "row"), nokta: P.el("span", "", "dot"), ad: P.el("strong"), metin: P.el("div", "", "metin"), zaman: P.el("div", "", "soft"), btn: P.el("button", "Ekran görüntüsü al", "o") };
+      k = { kok: P.el("div", "", "card"), ust: P.el("div", "", "row"), nokta: P.el("span", "", "dot"), ad: P.el("strong"), rozet: P.el("span", "Client kapalı", "rozet gizli"),
+            metin: P.el("div", "", "metin"), zaman: P.el("div", "", "soft"), btn: P.el("button", "Ekran görüntüsü al", "o"), istBtn: P.el("button", "İstatistik", "o"),
+            ist: P.el("div", "", "gizli"), donem: 0, veri: null };
       k.ust.style.justifyContent = "space-between";
-      var sol = P.el("div"); sol.appendChild(k.nokta); sol.appendChild(k.ad);
-      k.ust.appendChild(sol); k.ust.appendChild(k.btn);
-      k.zaman.style.fontSize = "13px";
-      k.kok.appendChild(k.ust); k.kok.appendChild(k.metin); k.kok.appendChild(k.zaman);
+      var sol = P.el("div"), sag = P.el("div");
+      sol.appendChild(k.nokta); sol.appendChild(k.ad); sol.appendChild(k.rozet);
+      k.istBtn.style.marginRight = "6px"; sag.appendChild(k.istBtn); sag.appendChild(k.btn);
+      k.ust.appendChild(sol); k.ust.appendChild(sag);
+      k.zaman.style.fontSize = "13px"; k.ist.style.marginTop = "10px";
+      k.kok.appendChild(k.ust); k.kok.appendChild(k.metin); k.kok.appendChild(k.zaman); k.kok.appendChild(k.ist);
       k.btn.onclick = function () { gGetir(c.id, k.ad.textContent); };
+      k.istBtn.onclick = function () {
+        var ac = k.ist.classList.contains("gizli"); k.ist.classList.toggle("gizli", !ac); k.istBtn.classList.toggle("on", ac);
+        if (ac) istCiz(k);
+      };
       kartlar[c.id] = k; kap.appendChild(k.kok);
     }
-    var eski = c.guncelleme == null || (simdi - c.guncelleme) > 180;
-    k.nokta.style.background = eski ? "#8b8f99" : "#4fb35c";
+    var kapali = kapaliMi(c, simdi);
+    k.nokta.style.background = kapali ? "#8b8f99" : "#4fb35c";
+    k.rozet.classList.toggle("gizli", !kapali);
     k.ad.textContent = c.ad;
-    k.metin.textContent = c.metin ? c.metin : "Henüz durum bildirilmedi.";
-    k.zaman.textContent = (eski ? "Bağlantı yok (uygulama kapalı olabilir) · " : "") + "Son güncelleme: " + gec(c.guncelleme);
+    k.metin.textContent = c.metin ? (kapali ? "Son bildirilen durum: " + c.metin : c.metin) : "Henüz durum bildirilmedi.";
+    k.zaman.textContent = "Son güncelleme: " + gec(c.guncelleme);
+    k.veri = c.ist || null;
+    if (!k.ist.classList.contains("gizli")) istCiz(k);
     k.btn.disabled = !!gZam;
   });
   Object.keys(kartlar).forEach(function (id) {
     if (!gelen[id]) { kartlar[id].kok.remove(); delete kartlar[id]; }
   });
 }
+
+$("yenidenAc").onclick = function () { P.yaz($("gMsg"), "Clienti Yeniden Aç özelliği yakında eklenecek.", "soft"); };
 
 // ---- Client görüntüsü (cihaz bazlı) ----
 function butonlar(kilit) { Object.keys(kartlar).forEach(function (id) { kartlar[id].btn.disabled = kilit; }); }
@@ -246,24 +450,14 @@ function gSor(id) {
     else if (j.durum !== "bekliyor") { gDurdur(); P.yaz($("gMsg"), "Bilgisayardan yanıt gelmedi.", "bad"); }
   }).catch(function () {});
 }
-
-$("tGiris").onclick = function () { modSec(false); };
-$("tKayit").onclick = function () { modSec(true); };
-$("formBtn").onclick = formGonder;
-["eposta", "sifre", "key"].forEach(function (i) { $(i).onkeydown = function (e) { if (e.key === "Enter") formGonder(); }; });
 $("gKapat").onclick = gKapat;
-$("sifreBtn").onclick = sifreKaydet;
-$("sifreIptal").onclick = function () { $("sifreKart").classList.add("gizli"); };
-$("sifre").autocomplete = "current-password";
 
 P.kur({
-  menu: [["ana", "Ana sayfa"], ["durum", "Durum takip"]],
-  alt: '<div id="kim" class="soft" style="margin-bottom:6px;word-break:break-all"></div><a id="sifreLink" class="gizli">Şifre değiştir</a><br><a id="yonLink" href="yonetim.html" class="gizli">Yönetim paneli</a><br><a id="cikis" class="gizli">Çıkış yap</a>',
-  ac: { durum: function () { if (oturum()) { if (profil) sorgula(false); else acik(); } } }
+  menu: [["ana", "Ana sayfa"], ["durum", "Canlı Takip"]],
+  alt: "",
+  ac: { durum: function () { if (oturum() && profil) sorgula(false); } }
 });
-$("cikis").onclick = cikis;
-$("sifreLink").onclick = function () { if (profil) sifreFormu(false); };
-if (oturum() && location.hash === "#durum") acik();
+if (oturum()) acik();
 setInterval(function () { if (location.hash === "#durum" && oturum() && !$("sonuc").classList.contains("gizli")) sorgula(false); }, 15000);
 </script>
 </body></html>

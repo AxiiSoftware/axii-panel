@@ -7,14 +7,14 @@
 </head><body>
 
 <div class="gate" id="giris">
-  <div class="brand"><img id="gIc" alt="">AXII YÖNETİM</div>
+  <div class="brand"><img id="gIc" alt="">Axii Yönetim</div>
   <div class="card">
     <div class="row"><input id="ep" type="email" placeholder="E-posta" autocomplete="username" style="flex:1"></div>
     <div class="row"><input id="tok" type="password" placeholder="Şifre" autocomplete="current-password" style="flex:1"><button id="girisBtn">Giriş</button></div>
     <div class="msg" id="girisMsg"></div>
-    <p class="s" style="font-size:13px;margin:0"><a id="kurtarma" style="cursor:pointer;text-decoration:underline">Kurtarma şifresiyle gir</a></p>
+
   </div>
-  <p class="s" style="text-align:center;font-size:13px"><a href="https://axiisoftware.github.io/axii-panel/" style="color:inherit">axiisoftware.github.io/axii-panel</a></p>
+  <p style="text-align:center"><a class="btn o" href="index.html">Ana sayfa</a></p>
 </div>
 
 <div class="w gizli" id="app">
@@ -139,7 +139,7 @@ function girisDene() {
 function giris() {
   if (!token) { P.yaz($("girisMsg"), "Bilgileri girin.", "bad"); return; }
   api("/admin/api/status").then(function (j) {
-    if (j._status === 401) { token = ""; sessionStorage.removeItem("axii_token"); P.yaz($("girisMsg"), kurtarmaModu ? "Şifre yanlış." : "Yönetici oturumu bulunamadı. Giriş yapın.", kurtarmaModu ? "bad" : "soft"); return; }
+    if (j._status === 401) { token = ""; sessionStorage.removeItem("axii_token"); if (kurtarmaModu) P.yaz($("girisMsg"), "Şifre yanlış.", "bad"); return; }
     if (j._status === 429) { P.yaz($("girisMsg"), "Çok fazla hatalı deneme. Bir süre bekleyin.", "bad"); return; }
     if (!j.ok) { P.yaz($("girisMsg"), "Hata: " + (j.code || j._status), "bad"); return; }
     sessionStorage.setItem("axii_token", token);
@@ -163,7 +163,6 @@ function kurtarmaAc() {
   kurtarmaModu = !kurtarmaModu;
   $("ep").classList.toggle("gizli", kurtarmaModu);
   $("tok").placeholder = kurtarmaModu ? "Kurtarma (ADMIN_TOKEN) şifresi" : "Şifre";
-  $("kurtarma").textContent = kurtarmaModu ? "E-posta ile giriş yap" : "Kurtarma şifresiyle gir";
   $("tok").value = ""; P.yaz($("girisMsg"), "", "");
 }
 
@@ -365,7 +364,7 @@ $("sYukle").onclick = surumYukle; $("sMinBtn").onclick = surumMin;
 $("girisBtn").onclick = girisDene;
 $("tok").onkeydown = function (e) { if (e.key === "Enter") girisDene(); };
 $("ep").onkeydown = function (e) { if (e.key === "Enter") girisDene(); };
-$("kurtarma").onclick = kurtarmaAc;
+if (location.hash === "#kurtarma") kurtarmaAc();   // gizli kurtarma girişi: yonetim.html#kurtarma
 $("uYenile").onclick = uListele; $("aBtn").onclick = adminOlustur;
 $("keygenBtn").onclick = keygen; $("olusturBtn").onclick = olustur;
 $("yenileBtn").onclick = listele; $("gYenile").onclick = gListele; $("yukleBtn").onclick = yukle;
