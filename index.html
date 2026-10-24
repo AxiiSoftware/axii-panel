@@ -50,6 +50,16 @@
     <div class="msg" id="maMsg"></div>
   </div>
 
+  <div data-m="cihaz" class="gizli">
+    <h3>Client ayarları</h3>
+    <div class="row"><input id="mcAd" placeholder="Client adı" maxlength="40" autocomplete="off"></div>
+    <div class="row"><button id="mcKaydet">Adı kaydet</button></div>
+    <hr>
+    <p class="s" style="margin:0 0 8px;font-size:13px">Clienti silersen kaydı ve tüm verisi kaldırılır, client sınırından düşer. Yalnızca uygulaması kapalı olan client silinebilir.</p>
+    <div class="row"><button id="mcSil" class="tehlike">Clienti sil</button></div>
+    <div class="msg" id="mcMsg"></div>
+  </div>
+
   <div data-m="sifre" class="gizli">
     <h3>Şifre değiştir</h3>
     <p class="s gizli" id="msZor" style="margin:0 0 8px;font-size:13px">Yönetici geçici bir şifre verdi. Devam etmeden önce yeni bir şifre belirle.</p>
@@ -185,16 +195,16 @@ document.querySelectorAll("#otoChips button").forEach(function (b) {
 var HATA = {
   bad_credentials: "E-posta ya da şifre hatalı.", pending: "Hesabın yönetici onayı bekliyor. Onaylanınca giriş yapabilirsin.",
   rate_limited: "Çok fazla deneme yapıldı, biraz bekle.", bad_email: "E-posta adresi geçersiz.",
-  weak_password: "Şifre en az 8 karakter olmalı.", invalid_key: "Geçersiz lisans anahtarı.", inactive: "Bu lisans devre dışı.",
+  online: "Bu client’ın uygulaması açık görünüyor. Önce uygulamayı kapat.", weak_password: "Şifre en az 8 karakter olmalı.", invalid_key: "Geçersiz lisans anahtarı.", inactive: "Bu lisans devre dışı.",
   expired: "Lisans süresi dolmuş.", key_taken: "Bu lisans anahtarı başka bir hesaba bağlı.", email_taken: "Bu e-posta ile zaten bir hesap var.",
   bad_request: "Girdiğin bilgileri kontrol et.", no_key: "Hesabına bağlı bir lisans anahtarı yok."
 };
 function modalAc(v, zor) {
   mZor = !!zor; $("modal").classList.remove("gizli"); $("hAcilir").classList.add("gizli");
-  ["giris", "kayit", "sifre", "anahtar"].forEach(function (x) { document.querySelector('[data-m="' + x + '"]').classList.toggle("gizli", x !== v); });
+  ["giris", "kayit", "sifre", "anahtar", "cihaz"].forEach(function (x) { document.querySelector('[data-m="' + x + '"]').classList.toggle("gizli", x !== v); });
   $("mKapat").classList.toggle("gizli", mZor); $("msZor").classList.toggle("gizli", !mZor);
-  ["mgMsg", "mkMsg", "msMsg", "maMsg"].forEach(function (i) { P.yaz($(i), "", ""); });
-  var f = { giris: "mgEp", kayit: "mkEp", sifre: "msEski", anahtar: "maKey" }[v];
+  ["mgMsg", "mkMsg", "msMsg", "maMsg", "mcMsg"].forEach(function (i) { P.yaz($(i), "", ""); });
+  var f = { giris: "mgEp", kayit: "mkEp", sifre: "msEski", anahtar: "maKey", cihaz: "mcAd" }[v];
   setTimeout(function () { $(f).focus(); }, 30);
 }
 function modalKapat() { if (!mZor) $("modal").classList.add("gizli"); }
@@ -358,11 +368,22 @@ var MODAD = { MC: "Görev Kitabı", OTO: "Enerji Parçası Üretim", MR: "Okey K
 function komut(k, id, ad, arg) {
   if (k.mesgul || !oturum()) return;
   k.mesgul = true; kontrolCiz(k);
-  P.yaz(k.kmsg, ad === "client_ac" ? "Client açılıyor, birkaç deneme gerekebilir..." : "Komut gönderildi...", "soft");
-  function bitti(m, ok) { k.mesgul = false; P.yaz(k.kmsg, m, ok ? "ok" : "bad"); kontrolCiz(k); sorgula(false); }
+  P.yaz(k.kmsg, ad === "client_ac" ? "Client açılıyor, bu işlem 1-2 dakika sürebilir..." : "Komut gönderildi...", "soft");
+  function bitti(m, ok) {
+    k.mesgul = false; P.yaz(k.kmsg, m, ok ? "ok" : "bad");
+    if (ok && k.sonC && k.sonC.kontrol) {   // ekran anında güncellensin, sonra gerçek durum gelir
+      var kt = k.sonC.kontrol;
+      if (ad === "toplama") kt.toplama = Number(arg);
+      else if (ad === "bag") kt.bag = arg;
+      else if (ad === "baslat") kt.calisiyor = 1;
+      else if (ad === "durdur") kt.calisiyor = 0;
+      else if (ad === "client_ac") kt.client = 1;
+    }
+    kontrolCiz(k); sorgula(false);
+  }
   P.api("/v1/uye/komut", { cihaz: id, ad: ad, arg: arg || "" }).then(function (j) {
     if (!j.ok) { bitti(j.code === "busy" ? "Bu bilgisayarda başka bir komut işleniyor." : (j.code === "rate_limited" ? "Çok fazla istek, biraz bekle." : "Hata: " + j.code), false); return; }
-    var bas = Date.now(), sure = ad === "client_ac" ? 150000 : 40000;
+    var bas = Date.now(), sure = ad === "client_ac" ? 235000 : 40000;
     var t = setInterval(function () {
       P.api("/v1/uye/komut-sorgula", { cihaz: id }).then(function (r) {
         if (!r.ok) return;
@@ -379,22 +400,52 @@ function komut(k, id, ad, arg) {
   }).catch(function () { bitti("Sunucuya ulaşılamadı.", false); });
 }
 
-// Kartın uzaktan kontrol bölümünü son bilinen duruma göre çizer.
+// Kartın kontrol bölümünü son bilinen duruma göre çizer.
 function kontrolCiz(k) {
   var c = k.sonC, kt = c && c.kontrol, kilit = k.mesgul || k.kapali;
-  k.kont.classList.toggle("gizli", !kt);
-  k.kontYok.classList.toggle("gizli", !!kt);
-  k.acBtn.disabled = kilit || (kt && kt.client === 1);
-  k.acBtn.title = (kt && kt.client === 1) ? "Client zaten açık" : "";
+  k.kp.classList.toggle("gizli", !kt);
+  k.kontYok.classList.toggle("gizli", !!kt && !k.kapali);
+  k.kontYok.textContent = k.kapali ? "Uygulama kapalı olduğu için uzaktan kontrol kullanılamıyor." : "Uzaktan kontrol için uygulamanın güncel sürümü gerekir.";
+  k.btn.disabled = !!gZam || k.kapali;
   if (!kt) return;
   var ad = kt.ml ? "Enerji Kristali Üretim" : (MODAD[kt.mod] || kt.mod);
   k.oto.textContent = (kt.calisiyor ? "Çalışıyor" : "Durdu") + " · " + ad;
   k.oto.className = kt.calisiyor ? "ok" : "bad";
-  k.bsBtn.textContent = kt.calisiyor ? "Durdur" : "Başlat"; k.bsBtn.disabled = kilit;
-  function tgl(b, ad2, acik) { b.textContent = (acik ? "☑ " : "☐ ") + ad2; b.classList.toggle("on", acik); }
-  tgl(k.tTop, "Otomatik Toplama", !!kt.toplama); tgl(k.tBag, "Otomatik Yeniden Bağlan", kt.bag === "baglan"); tgl(k.tAv, "Yeniden Bağlan + Oto Av", kt.bag === "baglan_av");
-  k.tTop.disabled = kilit; k.tBag.disabled = kilit || !!kt.calisiyor; k.tAv.disabled = kilit || !!kt.calisiyor;
-  k.tBag.title = k.tAv.title = kt.calisiyor ? "Otomasyon çalışırken değiştirilemez, önce durdur." : "";
+  k.bsBtn.textContent = kt.calisiyor ? "Durdur" : "Başlat"; k.bsBtn.className = kt.calisiyor ? "dur" : ""; k.bsBtn.disabled = kilit;
+  k.cliDr.textContent = k.kapali ? "Bilinmiyor" : (kt.client ? "Açık" : "Kapalı"); k.cliDr.className = "dr " + (k.kapali ? "soft" : (kt.client ? "ok" : "bad"));
+  k.acBtn.disabled = kilit; k.acBtn.textContent = kt.client ? "Clienti Yeniden Başlat" : "Clienti Yeniden Aç";
+  function sw(o, acik, kilitli) { o.giris.checked = acik; o.giris.disabled = kilitli; o.kok.classList.toggle("kapali", kilitli); }
+  sw(k.tTop, !!kt.toplama, kilit); sw(k.tBag, kt.bag === "baglan", kilit || !!kt.calisiyor); sw(k.tAv, kt.bag === "baglan_av", kilit || !!kt.calisiyor);
+  k.tBag.kok.title = k.tAv.kok.title = kt.calisiyor ? "Otomasyon çalışırken değiştirilemez, önce durdur." : "";
+}
+
+function anahtarKur(ad) {
+  var l = P.el("label", "", "sw"), i = P.el("input"), kn = P.el("span", "", "sw-k");
+  i.type = "checkbox"; l.appendChild(i); l.appendChild(kn); l.appendChild(P.el("span", ad));
+  return { kok: l, giris: i };
+}
+function blok(baslik) { var d = P.el("div", "", "kb"); d.appendChild(P.el("h4", baslik)); return d; }
+
+// Client ayarları penceresi: adlandır / sil
+function cihazAyar(k, id) {
+  modalAc("cihaz");
+  $("mcAd").value = k.ad.textContent; $("mcSil").disabled = !k.kapali;
+  $("mcSil").title = k.kapali ? "" : "Uygulaması açıkken silinemez";
+  $("mcKaydet").onclick = function () {
+    P.api("/v1/uye/cihaz-ad", { cihaz: id, ad: $("mcAd").value }).then(function (j) {
+      if (!j.ok) { P.yaz($("mcMsg"), HATA[j.code] || ("Hata: " + j.code), "bad"); return; }
+      $("modal").classList.add("gizli"); sorgula(true);
+    });
+  };
+  $("mcSil").onclick = function () {
+    if (!confirm(k.ad.textContent + " silinsin mi? Bu işlem geri alınamaz.")) return;
+    P.api("/v1/uye/cihaz-sil", { cihaz: id }).then(function (j) {
+      if (!j.ok) { P.yaz($("mcMsg"), HATA[j.code] || ("Hata: " + j.code), "bad"); return; }
+      $("modal").classList.add("gizli");
+      if (kartlar[id]) { kartlar[id].kok.remove(); delete kartlar[id]; }
+      sorgula(true);
+    });
+  };
 }
 
 function cihazlariCiz(liste, simdi) {
@@ -411,31 +462,33 @@ function cihazlariCiz(liste, simdi) {
     var k = kartlar[c.id];
     if (!k) {
       k = { kok: P.el("div", "", "card"), ust: P.el("div", "", "row"), nokta: P.el("span", "", "dot"), ad: P.el("strong"), rozet: P.el("span", "", "rozet gizli"),
-            metin: P.el("div", "", "metin"), zaman: P.el("div", "", "soft"), btn: P.el("button", "Ekran görüntüsü al", "o"), istBtn: P.el("button", "İstatistik", "o"),
-            acBtn: P.el("button", "Clienti Yeniden Aç", "o"), ist: P.el("div", "", "gizli"), donem: 0, veri: null, mesgul: false, kapali: false, sonC: null,
-            kont: P.el("div", "", "row"), kontYok: P.el("div", "Uzaktan kontrol için uygulamanın güncel sürümü gerekir.", "msg soft gizli"),
-            oto: P.el("strong"), bsBtn: P.el("button", "Başlat", "o s"), tTop: P.el("button", "", "o s"), tBag: P.el("button", "", "o s"), tAv: P.el("button", "", "o s"),
-            kmsg: P.el("div", "", "msg") };
+            metin: P.el("div", "", "metin"), zaman: P.el("div", "", "soft"), istBtn: P.el("button", "İstatistik", "o"), ayarBtn: P.el("button", "Ayarlar", "o"),
+            ist: P.el("div", "", "gizli"), donem: 0, veri: null, mesgul: false, kapali: false, sonC: null,
+            kp: P.el("div", "", "kp"), kontYok: P.el("div", "", "msg soft gizli"), kmsg: P.el("div", "", "msg"),
+            oto: P.el("div", "", "dr"), bsBtn: P.el("button", "Başlat"), cliDr: P.el("div", "", "dr"), acBtn: P.el("button", "Clienti Yeniden Aç", "o"),
+            btn: P.el("button", "Ekran görüntüsü al", "o"), tTop: anahtarKur("Otomatik Toplama"), tBag: anahtarKur("Otomatik Yeniden Bağlan"), tAv: anahtarKur("Yeniden Bağlan + Oto Av") };
       k.ust.style.justifyContent = "space-between";
       var sol = P.el("div"), sag = P.el("div");
       sol.appendChild(k.nokta); sol.appendChild(k.ad); sol.appendChild(k.rozet);
-      [k.istBtn, k.btn, k.acBtn].forEach(function (b) { b.style.marginLeft = "6px"; sag.appendChild(b); });
+      [k.istBtn, k.ayarBtn].forEach(function (b) { b.style.marginLeft = "6px"; sag.appendChild(b); });
       k.ust.appendChild(sol); k.ust.appendChild(sag);
       k.zaman.style.fontSize = "13px"; k.ist.style.marginTop = "10px";
-      var lb = P.el("span", "Otomasyon: ", "soft"); k.kont.appendChild(lb); k.kont.appendChild(k.oto);
-      [k.bsBtn, k.tTop, k.tBag, k.tAv].forEach(function (b) { k.kont.appendChild(b); });
-      k.kont.style.marginTop = "10px";
-      k.kok.appendChild(k.ust); k.kok.appendChild(k.metin); k.kok.appendChild(k.zaman); k.kok.appendChild(k.kont); k.kok.appendChild(k.kontYok); k.kok.appendChild(k.kmsg); k.kok.appendChild(k.ist);
+      var b1 = blok("Otomasyon"); b1.appendChild(k.oto); b1.appendChild(k.bsBtn);
+      var b2 = blok("Client"); b2.appendChild(k.cliDr); b2.appendChild(k.acBtn); b2.appendChild(k.btn);
+      var b3 = blok("Seçenekler"); b3.appendChild(k.tTop.kok); b3.appendChild(k.tBag.kok); b3.appendChild(k.tAv.kok);
+      k.kp.appendChild(b1); k.kp.appendChild(b2); k.kp.appendChild(b3);
+      k.kok.appendChild(k.ust); k.kok.appendChild(k.metin); k.kok.appendChild(k.zaman); k.kok.appendChild(k.kp); k.kok.appendChild(k.kontYok); k.kok.appendChild(k.kmsg); k.kok.appendChild(k.ist);
       k.btn.onclick = function () { gGetir(c.id, k.ad.textContent); };
       k.istBtn.onclick = function () {
         var ac = k.ist.classList.contains("gizli"); k.ist.classList.toggle("gizli", !ac); k.istBtn.classList.toggle("on", ac);
         if (ac) istCiz(k);
       };
-      k.acBtn.onclick = function () { komut(k, c.id, "client_ac", ""); };
+      k.ayarBtn.onclick = function () { cihazAyar(k, c.id); };
+      k.acBtn.onclick = function () { komut(k, c.id, "client_ac", "baslat"); };
       k.bsBtn.onclick = function () { komut(k, c.id, k.sonC.kontrol.calisiyor ? "durdur" : "baslat", ""); };
-      k.tTop.onclick = function () { komut(k, c.id, "toplama", k.sonC.kontrol.toplama ? "0" : "1"); };
-      k.tBag.onclick = function () { komut(k, c.id, "bag", k.sonC.kontrol.bag === "baglan" ? "yok" : "baglan"); };
-      k.tAv.onclick = function () { komut(k, c.id, "bag", k.sonC.kontrol.bag === "baglan_av" ? "yok" : "baglan_av"); };
+      k.tTop.giris.onchange = function () { komut(k, c.id, "toplama", this.checked ? "1" : "0"); };
+      k.tBag.giris.onchange = function () { komut(k, c.id, "bag", this.checked ? "baglan" : "yok"); };
+      k.tAv.giris.onchange = function () { komut(k, c.id, "bag", this.checked ? "baglan_av" : "yok"); };
       kartlar[c.id] = k; kap.appendChild(k.kok);
     }
     var uygKapali = kapaliMi(c, simdi), kapali = clientKapali(c, simdi);
@@ -448,7 +501,6 @@ function cihazlariCiz(liste, simdi) {
     k.zaman.textContent = "Son güncelleme: " + gec(c.guncelleme);
     k.veri = c.ist || null;
     if (!k.ist.classList.contains("gizli")) istCiz(k);
-    k.btn.disabled = !!gZam;
     kontrolCiz(k);
   });
   Object.keys(kartlar).forEach(function (id) {
@@ -457,7 +509,7 @@ function cihazlariCiz(liste, simdi) {
 }
 
 // ---- Client görüntüsü (cihaz bazlı) ----
-function butonlar(kilit) { Object.keys(kartlar).forEach(function (id) { kartlar[id].btn.disabled = kilit; }); }
+function butonlar(kilit) { Object.keys(kartlar).forEach(function (id) { kartlar[id].btn.disabled = kilit || kartlar[id].kapali; }); }
 function gDurdur() { if (gZam) { clearInterval(gZam); gZam = null; } butonlar(false); }
 function gKapatYerel() {
   gDurdur(); $("gImg").removeAttribute("src"); $("gKart").classList.add("gizli");

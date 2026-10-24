@@ -82,3 +82,20 @@ table.it td,table.it th{font-size:13px}
 .sv-r{fill:var(--bad);font:11px "Segoe UI",system-ui,sans-serif}
 .sv-a{fill:var(--acc)}
 .sv-n{fill:var(--on);font:700 10px "Segoe UI",system-ui,sans-serif}
+/* ---- Client kartı: düzenli kontrol bölümü ---- */
+.kp{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:10px;margin-top:12px}
+.kb{border:1px solid var(--line);border-radius:var(--r);padding:10px 12px;background:var(--bg)}
+.kb h4{margin:0 0 8px;font-size:12px;font-weight:600;color:var(--soft);letter-spacing:.4px;text-transform:uppercase}
+.kb .dr{font-size:14px;margin-bottom:8px}
+.kb button{display:block;width:100%;margin-top:6px;text-align:center}
+button.dur{background:var(--bad);color:#fff}
+.sw{display:flex;align-items:center;gap:9px;margin:7px 0;font-size:14px;cursor:pointer;user-select:none;position:relative}
+.sw input{position:absolute;opacity:0;pointer-events:none}
+.sw-k{width:34px;height:18px;border-radius:9px;background:var(--line);position:relative;flex:none;transition:.15s}
+.sw-k::after{content:"";position:absolute;top:2px;left:2px;width:14px;height:14px;border-radius:50%;background:var(--soft);transition:.15s}
+.sw input:checked+.sw-k{background:var(--acc)}
+.sw input:checked+.sw-k::after{left:18px;background:var(--on)}
+.sw input:disabled+.sw-k{opacity:.45}
+.sw.kapali{cursor:default;color:var(--soft)}
+.mkutu hr{border:0;border-top:1px solid var(--line);margin:14px 0}
+button.tehlike{background:transparent;color:var(--bad);border:1px solid var(--bad);font-weight:500}
