@@ -34,7 +34,7 @@
       <div class="card">
         <div class="row">
           <label>Gün</label><input id="gun" type="number" value="30" min="1" max="3650" style="width:80px">
-          <label>Cihaz</label><input id="cihaz" type="number" value="2" min="1" max="50" style="width:70px">
+          <label>Client</label><input id="cihaz" type="number" value="2" min="1" max="50" style="width:70px">
           <label>Not</label><input id="not" placeholder="örn. Ahmet" maxlength="100" style="min-width:160px">
           <button id="olusturBtn">Oluştur</button>
         </div>
@@ -44,7 +44,7 @@
       <div class="card">
         <div class="row" style="justify-content:space-between"><h3 style="margin:0">Liste</h3><button class="o s" id="yenileBtn">Yenile</button></div>
         <div class="msg" id="listeMsg"></div>
-        <div class="tw"><table><thead><tr><th>Anahtar</th><th>Durum</th><th>Bitiş</th><th>Cihaz</th><th>Son görülme</th><th>Not</th><th>İşlem</th></tr></thead><tbody id="tbody"></tbody></table></div>
+        <div class="tw"><table><thead><tr><th>Anahtar</th><th>Durum</th><th>Bitiş</th><th>Client</th><th>Son görülme</th><th>Not</th><th>İşlem</th></tr></thead><tbody id="tbody"></tbody></table></div>
       </div>
     </section>
 
@@ -254,8 +254,8 @@ function listele() {
       function btn(ad, fn) { var b = el("button", ad, "o s"); b.onclick = fn; c.appendChild(b); }
       btn("Süre uzat", function () { var g = prompt("Kaç gün uzatılsın?", "30"); if (g) islem("/admin/api/extend", { key: x.key, days: Number(g) }); });
       btn(x.active ? "İptal et" : "Tekrar aç", function () { islem("/admin/api/setactive", { key: x.key, active: !x.active }, x.active ? "Bu lisans iptal edilsin mi?" : null); });
-      btn("Cihazları sıfırla", function () { islem("/admin/api/resetdevices", { key: x.key }, "Kayıtlı cihazlar silinsin mi?"); });
-      btn("Cihaz limiti", function () { var g = prompt("Yeni cihaz limiti (1-50):", String(x.max_devices)); if (g) islem("/admin/api/setmax", { key: x.key, max_devices: Number(g) }); });
+      btn("Client kayıtlarını sıfırla", function () { islem("/admin/api/resetdevices", { key: x.key }, "Kayıtlı client'lar silinsin mi?"); });
+      btn("Client limiti", function () { var g = prompt("Yeni client limiti (1-50):", String(x.max_devices)); if (g) islem("/admin/api/setmax", { key: x.key, max_devices: Number(g) }); });
       btn("Sil", function () { if (confirm("Bu lisans KALICI silinsin mi? " + x.key)) islem("/admin/api/delete", { key: x.key }); });
       tr.appendChild(c); tb.appendChild(tr);
     });
