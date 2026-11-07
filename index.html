@@ -26,6 +26,7 @@
     <h3>Giriş yap</h3>
     <div class="row"><input id="mgEp" type="email" placeholder="E-posta" autocomplete="username"></div>
     <div class="row"><input id="mgSf" type="password" placeholder="Şifre" autocomplete="current-password"></div>
+    <div class="row gizli" id="mgKodSatir"><input id="mgKod" inputmode="numeric" maxlength="6" placeholder="Doğrulama kodu (6 hane)" autocomplete="one-time-code"></div>
     <div class="row"><button id="mgBtn">Giriş yap</button></div>
     <div class="msg" id="mgMsg"></div>
     <p class="alt-l"><a id="mgUnuttum">Şifremi unuttum</a> · Hesabın yok mu? <a id="mgKayit">Kayıt ol</a></p>
@@ -100,30 +101,30 @@
         <p>Bir otomasyon seçip nasıl çalıştığını ve nelere dikkat etmen gerektiğini oku.</p>
         <div class="chips" id="otoChips">
           <button class="o on" data-k="mc">Görev Kitabı</button>
-          <button class="o" data-k="oto">Enerji Parçası Üretim</button>
-          <button class="o" data-k="mr">Okey Kart Seti Üretim</button>
-          <button class="o" data-k="ln">Lonca Puan Üretim</button>
-          <button class="o" data-k="yn">Yutnori</button>
+          <button class="o" data-k="oto">Enerji Parçası</button>
+          <button class="o" data-k="mr">Okey Kart Seti</button>
+          <button class="o" data-k="ln">Lonca Bağışı</button>
+          <button class="o" data-k="yn">Yutnori Kart Seti</button>
         </div>
         <div class="ozel oto-p" data-k="mc">
           <p><b>Görev Kitabı</b> · Görev Kitabı Prens (2 ve 3) otomasyonudur.</p>
           <p><b>Çalışma mantığı:</b> Seçtiğin görev kitabına sağ tıklayarak istediğin görev gelene kadar görevi yeniler, doğru görevi bulunca bitirir ve aynı işlemi tekrarlar.</p>
         </div>
         <div class="ozel oto-p gizli" data-k="oto">
-          <p><b>Enerji Parçası Üretim</b> · Enerji parçası ve enerji kristali üretim otomasyonudur.</p>
-          <p><b>Çalışma mantığı:</b> 2, 3 ve 4. envanterlerdeki yeni itemleri takip eder, efsun koruması uygular ve büyülü çekiçle üretim yapar. Enerji Kristali Üretim sekmesi, Simyacı’dan kristal üretimini sürekli tekrarlar.</p>
+          <p><b>Enerji Parçası</b> · Enerji parçası ve enerji kristali üretim otomasyonudur.</p>
+          <p><b>Çalışma mantığı:</b> 2, 3 ve 4. envanterlerdeki yeni itemleri takip eder, efsun koruması uygular ve büyülü çekiçle üretim yapar. Enerji Kristali sekmesi, Simyacı’dan kristal üretimini sürekli tekrarlar.</p>
         </div>
         <div class="ozel oto-p gizli" data-k="mr">
-          <p><b>Okey Kart Seti Üretim</b> · Okey Kart Seti oynama otomasyonudur.</p>
+          <p><b>Okey Kart Seti</b> · Okey Kart Seti oynama otomasyonudur.</p>
           <p><b>Çalışma mantığı:</b> Okey etkinliğini baştan sona kendisi oynar ve kart seti üretimini tekrarlar.</p>
         </div>
         <div class="ozel oto-p gizli" data-k="ln">
-          <p><b>Lonca Puan Üretim</b> <span class="soft">(Deneysel)</span> · Birden çok hesap ve karakterle günlük lonca katılımı ile exp/yang bağışı yaparak lonca puanı üretir.</p>
+          <p><b>Lonca Bağışı</b> <span class="soft">(Deneysel)</span> · Birden çok hesap ve karakterle günlük lonca katılımı ile exp/yang bağışı yaparak lonca puanı üretir.</p>
           <p><b>Çalışma mantığı:</b> Kayıtlı hesapları sırayla açar. İşaretli her karakterle oyuna girip günlük katılım, exp ve yang bağışını yapar, sonra sıradaki karaktere geçer. Son karakterden sonra oyundan çıkıp sıradaki hesaba geçer, son hesap bitince durur.</p>
         </div>
 
         <div class="ozel oto-p gizli" data-k="yn">
-          <p><b>Yutnori</b> · Cadılar Bayramı Yutnori mini oyununu bilgisayara karşı kendisi oynar.</p>
+          <p><b>Yutnori Kart Seti</b> · Cadılar Bayramı Yutnori mini oyununu bilgisayara karşı kendisi oynar.</p>
           <p><b>Çalışma mantığı:</b> Etkinlik penceresinden Yutnori’yi açar ve oyunu başlatır. Her atıştan önce taşların konumuna göre olasılık menüsünden sonucu seçer, iki taşı mümkün olduğunca üst üste getirip birlikte götürür, rakip taşını yakalayabiliyorsa yakalar. Oyun bitince ödülü alıp yeni oyuna geçer. Envanterde Yutnori Oyun Tahtası ve 30.000 Yang olmalı.</p>
         </div>
 
@@ -136,7 +137,7 @@
 
         <h3>Ortak sistemler</h3>
         <ul>
-          <li><b>Başlat / Durdur ve sayaçlar:</b> Sol sütundaki düğme seçili otomasyonu başlatır ve durdurur. Başarılı İşlem Sayacı ve çalışma süresi burada görünür. Enerji Parçası Üretim’de ayrıca yakalanan efsunlu item sayısı da sayılır.</li>
+          <li><b>Başlat / Durdur ve sayaçlar:</b> Sol sütundaki düğme seçili otomasyonu başlatır ve durdurur. Başarılı İşlem Sayacı ve çalışma süresi burada görünür. Enerji Parçası’de ayrıca yakalanan efsunlu item sayısı da sayılır.</li>
           <li><b>Otomatik Yeniden Bağlan:</b> Bağlantı koparsa oyuna yeniden bağlanır. “+ Otomatik Av Aktif Et” seçeneği, yeniden bağlandıktan sonra otomatik avı da açar. İki seçenek birlikte işaretlenemez ve otomasyon çalışırken değiştirilemez.</li>
           <li><b>Otomatik Toplama Aktif Et:</b> Hangi otomasyon seçiliyse Başlat’a bastığında onunla birlikte devreye girer. Tüm otomasyonlarda ortak çalışır.</li>
         </ul>
@@ -184,6 +185,18 @@
       <div class="msg soft" id="gMsg"></div>
     </section>
 
+    <section data-s="sistem" hidden>
+      <h2>Sistem durumu</h2>
+      <p class="alt-baslik">Sunucu, veritabanı ve güncel sürüm bilgisi.</p>
+      <div class="card">
+        <div class="kv"><span>Sunucu</span><span id="dApi" class="soft">Kontrol ediliyor...</span></div>
+        <div class="kv"><span>Veritabanı</span><span id="dDb" class="soft">—</span></div>
+        <div class="kv"><span>Güncel sürüm</span><span id="dSurum" class="soft">—</span></div>
+        <div class="kv"><span>Bakım</span><span id="dBakim" class="soft">—</span></div>
+      </div>
+      <p class="soft">Burası açılıyorsa uygulama da sunucuya ulaşabilir.</p>
+    </section>
+
     <section data-s="destek" hidden>
       <h2>Destek</h2>
       <p class="alt-baslik">Sorunlarını ve isteklerini buradan ilet. Yanıt aşağıda görünür.</p>
@@ -200,9 +213,10 @@
       </div>
     </section>
 
-    <div class="altbilgi"><a href="gizlilik.html">Gizlilik ve aydınlatma</a><a href="sartlar.html">Kullanım şartları</a><a href="durum.html">Sistem durumu</a></div>
+    <div class="altbilgi"><a href="gizlilik.html">Gizlilik ve aydınlatma</a><a href="sartlar.html">Kullanım şartları</a></div>
   </main>
 </div>
 <script src="config.js"></script><script src="panel.js"></script>
+<script src="durum.js"></script>
 <script src="uye.js"></script>
 </body></html>

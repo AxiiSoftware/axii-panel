@@ -25,6 +25,7 @@ var MODALLAR = ["giris", "kayit", "unuttum", "sifre", "anahtar", "cihaz"];
 var ILK_ALAN = { giris: "mgEp", kayit: "mkEp", unuttum: "muEp", sifre: "msEski", anahtar: "maKey", cihaz: "mcAd" };
 function modalAc(v, zor) {
   mZor = !!zor; gizle("modal", false); gizle("hAcilir", true);
+  gizle("mgKodSatir", true); $("mgKod").value = "";
   MODALLAR.forEach(function (x) { document.querySelector('[data-m="' + x + '"]').classList.toggle("gizli", x !== v); });
   gizle("mKapat", mZor); gizle("msZor", !mZor);
   ["mgMsg", "mkMsg", "muMsg", "msMsg", "maMsg", "mcMsg"].forEach(function (i) { P.yaz($(i), "", ""); });
@@ -45,13 +46,20 @@ $("hKim").onclick = function () { $("hAcilir").classList.toggle("gizli"); };
 $("sifreLink").onclick = function () { modalAc("sifre", false); };
 
 function girisGonder() {
-  var e = $("mgEp").value.trim(), p = $("mgSf").value;
+  var e = $("mgEp").value.trim(), p = $("mgSf").value, kod = $("mgKod").value.trim();
   if (!e || !p) { P.yaz($("mgMsg"), "E-posta ve şifreyi gir.", "bad"); return; }
   $("mgBtn").disabled = true; P.yaz($("mgMsg"), "Giriş yapılıyor...", "soft");
-  P.api("/v1/uye/giris", { eposta: e, sifre: p }, "").then(function (j) {
+  P.api("/v1/uye/giris", kod ? { eposta: e, sifre: p, kod: kod } : { eposta: e, sifre: p }, "").then(function (j) {
     $("mgBtn").disabled = false;
-    if (!j.ok) { P.yaz($("mgMsg"), P.hataMetni(j), "bad"); return; }
-    $("mgSf").value = ""; P.depoYaz(P.TK, j.token);
+    if (!j.ok) {
+      if (j.code === "totp_required" || j.code === "bad_totp") {
+        gizle("mgKodSatir", false); $("mgKod").value = ""; $("mgKod").focus();
+        P.yaz($("mgMsg"), j.code === "totp_required" ? "Doğrulama uygulamandaki 6 haneli kodu gir." : "Doğrulama kodu hatalı, tekrar dene.", j.code === "totp_required" ? "soft" : "bad");
+        return;
+      }
+      P.yaz($("mgMsg"), P.hataMetni(j), "bad"); return;
+    }
+    $("mgSf").value = ""; $("mgKod").value = ""; gizle("mgKodSatir", true); P.depoYaz(P.TK, j.token);
     mZor = false; gizle("modal", true); acik();
   }).catch(function () { $("mgBtn").disabled = false; P.yaz($("mgMsg"), "Sunucuya ulaşılamadı.", "bad"); });
 }
@@ -107,7 +115,7 @@ function anahtarDegistir() {
 }
 $("maBtn").onclick = anahtarDegistir; $("maKey").onkeydown = function (e) { if (e.key === "Enter") anahtarDegistir(); };
 $("mgBtn").onclick = girisGonder; $("mkBtn").onclick = kayitGonder; $("msBtn").onclick = sifreKaydet; $("muBtn").onclick = sifirlaGonder;
-[["mgEp", girisGonder], ["mgSf", girisGonder], ["mkEp", kayitGonder], ["mkSf", kayitGonder], ["mkKey", kayitGonder],
+[["mgEp", girisGonder], ["mgSf", girisGonder], ["mgKod", girisGonder], ["mkEp", kayitGonder], ["mkSf", kayitGonder], ["mkKey", kayitGonder],
  ["muEp", sifirlaGonder], ["muKey", sifirlaGonder], ["muSf", sifirlaGonder], ["msEski", sifreKaydet], ["msYeni", sifreKaydet]].forEach(function (x) {
   $(x[0]).onkeydown = function (e) { if (e.key === "Enter") x[1](); };
 });
@@ -167,11 +175,11 @@ function clientKapali(c, simdi) { return kapaliMi(c, simdi) || !!(c.kontrol && !
 // ---- İstatistik (uygulamadaki Seçenekler > İstatistik ile aynı sistemler) ----
 var IST = [
   ["MC", "Görev Kitabı", ["Tamamlanan görev", "İptal", "Bağlantı kopması"]],
-  ["OTO", "Enerji Parçası Üretim", ["Başarılı işlem", "Yakalanan efsun", "Bağlantı kopması"]],
-  ["ML", "Enerji Kristali Üretim", ["Üretilen kristal"]],
-  ["MR", "Okey Kart Seti Üretim", ["Tamamlanan oyun"]],
-  ["LN", "Lonca Puan Üretim", ["Tamamlanan karakter"]],
-  ["YN", "Yutnori", ["Tamamlanan oyun", "Kazanılan", "Kaybedilen"]]
+  ["OTO", "Enerji Parçası", ["Başarılı işlem", "Yakalanan efsun", "Bağlantı kopması"]],
+  ["ML", "Enerji Kristali", ["Üretilen kristal"]],
+  ["MR", "Okey Kart Seti", ["Tamamlanan oyun"]],
+  ["LN", "Lonca Bağışı", ["Tamamlanan karakter"]],
+  ["YN", "Yutnori Kart Seti", ["Tamamlanan oyun", "Kazanılan", "Kaybedilen"]]
 ];
 var DONEM = ["Son 24 saat", "Son 1 hafta", "Son 1 ay"];
 function istCiz(k) {
@@ -201,7 +209,7 @@ function istCiz(k) {
   var w = P.el("div", "", "tw"); w.appendChild(tbl); kap.appendChild(w);
 }
 
-var MODAD = { MC: "Görev Kitabı", OTO: "Enerji Parçası Üretim", MR: "Okey Kart Seti Üretim", LN: "Lonca Puan Üretim", YN: "Yutnori", HOME: "Otomasyon seçili değil" };
+var MODAD = { MC: "Görev Kitabı", OTO: "Enerji Parçası", MR: "Okey Kart Seti", LN: "Lonca Bağışı", YN: "Yutnori Kart Seti", HOME: "Otomasyon seçili değil" };
 
 // Uzaktan komut: panel komutu bırakır, uygulama kısa sürede alır ve sonucu bildirir.
 function komut(k, id, ad, arg) {
@@ -246,7 +254,7 @@ function kontrolCiz(k) {
   k.kontYok.textContent = k.kapali ? "Uygulama kapalı olduğu için uzaktan kontrol kullanılamıyor." : "Uzaktan kontrol için uygulamanın güncel sürümü gerekir.";
   k.btn.disabled = !!gZam || k.kapali;
   if (!kt) return;
-  var ad = kt.ml ? "Enerji Kristali Üretim" : (MODAD[kt.mod] || kt.mod);
+  var ad = kt.ml ? "Enerji Kristali" : (MODAD[kt.mod] || kt.mod);
   k.oto.textContent = (kt.calisiyor ? "Çalışıyor" : "Durdu") + " · " + ad;
   k.oto.className = "dr " + (kt.calisiyor ? "ok" : "soft");
   k.bsBtn.textContent = kt.calisiyor ? "Durdur" : "Başlat"; k.bsBtn.className = kt.calisiyor ? "dur" : ""; k.bsBtn.disabled = kilit;
@@ -410,8 +418,8 @@ $("dGonder").onclick = function () {
 };
 
 P.kur({
-  menu: [["ana", "Ana sayfa"], ["durum", "Canlı Takip"], ["destek", "Destek"]],
-  alt: [["Gizlilik", "gizlilik.html"], ["Kullanım şartları", "sartlar.html"], ["Sistem durumu", "durum.html"]],
+  menu: [["ana", "Ana sayfa"], ["durum", "Canlı Takip"], ["sistem", "Sistem durumu"], ["destek", "Destek"]],
+  alt: [["Gizlilik", "gizlilik.html"], ["Kullanım şartları", "sartlar.html"]],
   ac: {
     durum: function () { if (oturum() && profil) sorgula(false); },
     destek: function () { if (oturum() && profil) destekListele(); }
