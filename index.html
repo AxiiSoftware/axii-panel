@@ -1,0 +1,208 @@
+<!doctype html>
+<html lang="tr"><head><meta charset="utf-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src https://axii-lisans.axiisoftwaresystems.workers.dev; base-uri 'none'; form-action 'none'">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Axii Software</title>
+<link rel="icon" href="logo.png">
+<link rel="stylesheet" href="panel.css">
+</head><body>
+
+<div class="hesap" id="hesap">
+  <button id="hGiris">Giriş yap</button><button id="hKayit" class="o">Kayıt ol</button>
+  <div id="hMenu" class="hesap-menu gizli">
+    <button id="hKim" class="o"></button>
+    <div class="acilir gizli" id="hAcilir">
+      <a id="sifreLink">Şifre değiştir</a>
+      <a id="yonLink" href="https://axii-lisans.axiisoftwaresystems.workers.dev/yonetim" class="gizli">Yönetim paneli</a>
+      <a id="cikis">Çıkış yap</a>
+    </div>
+  </div>
+</div>
+
+<div class="modal gizli" id="modal"><div class="mkutu">
+  <button class="x" id="mKapat" aria-label="Kapat">×</button>
+
+  <div data-m="giris">
+    <h3>Giriş yap</h3>
+    <div class="row"><input id="mgEp" type="email" placeholder="E-posta" autocomplete="username"></div>
+    <div class="row"><input id="mgSf" type="password" placeholder="Şifre" autocomplete="current-password"></div>
+    <div class="row"><button id="mgBtn">Giriş yap</button></div>
+    <div class="msg" id="mgMsg"></div>
+    <p class="alt-l"><a id="mgUnuttum">Şifremi unuttum</a> · Hesabın yok mu? <a id="mgKayit">Kayıt ol</a></p>
+  </div>
+
+  <div data-m="kayit" class="gizli">
+    <h3>Kayıt ol</h3>
+    <div class="row"><input id="mkEp" type="email" placeholder="E-posta" autocomplete="username"></div>
+    <div class="row"><input id="mkSf" type="password" placeholder="Şifre (en az 10 karakter)" autocomplete="new-password"></div>
+    <div class="row"><input id="mkKey" placeholder="Lisans anahtarı" autocomplete="off"></div>
+    <label class="onay"><input type="checkbox" id="mkRiza"><span><a href="gizlilik.html" target="_blank" rel="noopener">Aydınlatma metnini</a> ve <a href="sartlar.html" target="_blank" rel="noopener">kullanım şartlarını</a> okudum. Canlı takip için durum bilgisinin ve istediğimde ekran görüntüsünün işlenmesini kabul ediyorum.</span></label>
+    <p class="not">Hesabın, yönetici onayından sonra aktif olur.</p>
+    <div class="row"><button id="mkBtn">Kayıt ol</button></div>
+    <div class="msg" id="mkMsg"></div>
+    <p class="alt-l">Hesabın var mı? <a id="mkGiris">Giriş yap</a></p>
+  </div>
+
+  <div data-m="unuttum" class="gizli">
+    <h3>Şifre sıfırla</h3>
+    <p class="not">Hesabına bağlı lisans anahtarı seni doğrular. Yeni şifre belirleyince tüm açık oturumların kapanır.</p>
+    <div class="row"><input id="muEp" type="email" placeholder="E-posta" autocomplete="username"></div>
+    <div class="row"><input id="muKey" placeholder="Lisans anahtarı" autocomplete="off"></div>
+    <div class="row"><input id="muSf" type="password" placeholder="Yeni şifre (en az 10 karakter)" autocomplete="new-password"></div>
+    <div class="row"><button id="muBtn">Şifreyi sıfırla</button></div>
+    <div class="msg" id="muMsg"></div>
+    <p class="alt-l"><a id="muGiris">Girişe dön</a></p>
+  </div>
+
+  <div data-m="anahtar" class="gizli">
+    <h3>Lisans anahtarını değiştir</h3>
+    <p class="not">Yeni bir anahtar aldıysan buraya gir. Hesabın bu anahtara bağlanır.</p>
+    <div class="row"><input id="maKey" placeholder="Yeni lisans anahtarı" autocomplete="off"></div>
+    <div class="row"><button id="maBtn">Değiştir</button></div>
+    <div class="msg" id="maMsg"></div>
+  </div>
+
+  <div data-m="cihaz" class="gizli">
+    <h3>Client ayarları</h3>
+    <div class="row"><input id="mcAd" placeholder="Client adı" maxlength="40" autocomplete="off"></div>
+    <div class="row"><button id="mcKaydet">Adı kaydet</button></div>
+    <hr>
+    <p class="not">Clienti silersen kaydı ve tüm verisi kaldırılır, client sınırından düşer. Yalnızca uygulaması kapalı olan client silinebilir.</p>
+    <div class="row"><button id="mcSil" class="tehlike">Clienti sil</button></div>
+    <div class="msg" id="mcMsg"></div>
+  </div>
+
+  <div data-m="sifre" class="gizli">
+    <h3>Şifre değiştir</h3>
+    <p class="not gizli" id="msZor">Yönetici geçici bir şifre verdi. Devam etmeden önce yeni bir şifre belirle.</p>
+    <div class="row"><input id="msEski" type="password" placeholder="Mevcut şifre" autocomplete="current-password"></div>
+    <div class="row"><input id="msYeni" type="password" placeholder="Yeni şifre (en az 10 karakter)" autocomplete="new-password"></div>
+    <div class="row"><button id="msBtn">Kaydet</button></div>
+    <div class="msg" id="msMsg"></div>
+  </div>
+</div></div>
+
+<div class="w">
+  <aside class="side" id="side"></aside>
+  <main class="main">
+
+    <div class="bildirim s gizli" id="bakimBilgi"></div>
+
+    <section data-s="ana">
+      <h2>Axii Software</h2>
+      <p class="alt-baslik">Canlı Takip ve Lisans İşlemleri Paneli</p>
+
+      <div class="card rehber">
+        <h3>Axii Software nedir?</h3>
+        <p>Temeli görüntü işlemeye dayanan, stabil çalışan ve kullanımı kolay bir Metin2 makrosudur. Size zaman kazandırmak amacıyla geliştirilmiştir ve genel olarak otomatik av altı kullanıma yöneliktir.</p>
+
+        <h3>Otomasyonlar</h3>
+        <p>Bir otomasyon seçip nasıl çalıştığını ve nelere dikkat etmen gerektiğini oku.</p>
+        <div class="chips" id="otoChips">
+          <button class="o on" data-k="mc">Görev Kitabı</button>
+          <button class="o" data-k="oto">Enerji Parçası Üretim</button>
+          <button class="o" data-k="mr">Okey Kart Seti Üretim</button>
+          <button class="o" data-k="ln">Lonca Puan Üretim</button>
+          <button class="o" data-k="yn">Yutnori</button>
+        </div>
+        <div class="ozel oto-p" data-k="mc">
+          <p><b>Görev Kitabı</b> · Görev Kitabı Prens (2 ve 3) otomasyonudur.</p>
+          <p><b>Çalışma mantığı:</b> Seçtiğin görev kitabına sağ tıklayarak istediğin görev gelene kadar görevi yeniler, doğru görevi bulunca bitirir ve aynı işlemi tekrarlar.</p>
+        </div>
+        <div class="ozel oto-p gizli" data-k="oto">
+          <p><b>Enerji Parçası Üretim</b> · Enerji parçası ve enerji kristali üretim otomasyonudur.</p>
+          <p><b>Çalışma mantığı:</b> 2, 3 ve 4. envanterlerdeki yeni itemleri takip eder, efsun koruması uygular ve büyülü çekiçle üretim yapar. Enerji Kristali Üretim sekmesi, Simyacı’dan kristal üretimini sürekli tekrarlar.</p>
+        </div>
+        <div class="ozel oto-p gizli" data-k="mr">
+          <p><b>Okey Kart Seti Üretim</b> · Okey Kart Seti oynama otomasyonudur.</p>
+          <p><b>Çalışma mantığı:</b> Okey etkinliğini baştan sona kendisi oynar ve kart seti üretimini tekrarlar.</p>
+        </div>
+        <div class="ozel oto-p gizli" data-k="ln">
+          <p><b>Lonca Puan Üretim</b> <span class="soft">(Deneysel)</span> · Birden çok hesap ve karakterle günlük lonca katılımı ile exp/yang bağışı yaparak lonca puanı üretir.</p>
+          <p><b>Çalışma mantığı:</b> Kayıtlı hesapları sırayla açar. İşaretli her karakterle oyuna girip günlük katılım, exp ve yang bağışını yapar, sonra sıradaki karaktere geçer. Son karakterden sonra oyundan çıkıp sıradaki hesaba geçer, son hesap bitince durur.</p>
+        </div>
+
+        <div class="ozel oto-p gizli" data-k="yn">
+          <p><b>Yutnori</b> · Cadılar Bayramı Yutnori mini oyununu bilgisayara karşı kendisi oynar.</p>
+          <p><b>Çalışma mantığı:</b> Etkinlik penceresinden Yutnori’yi açar ve oyunu başlatır. Her atıştan önce taşların konumuna göre olasılık menüsünden sonucu seçer, iki taşı mümkün olduğunca üst üste getirip birlikte götürür, rakip taşını yakalayabiliyorsa yakalar. Oyun bitince ödülü alıp yeni oyuna geçer. Envanterde Yutnori Oyun Tahtası ve 30.000 Yang olmalı.</p>
+        </div>
+
+        <h3>Seçenekler menüsü</h3>
+        <ul>
+          <li><b>Bilgi:</b> Uygulama hakkında kısa bilgi.</li>
+          <li><b>İstatistik:</b> Bir sistem seçip son 24 saat, 1 hafta ya da 1 ay için oturum sayısını, toplam çalışma süresini, işlem sayısını ve saatlik ortalamayı görürsün.</li>
+          <li><b>İletişim:</b> İletişim bilgileri.</li>
+        </ul>
+
+        <h3>Ortak sistemler</h3>
+        <ul>
+          <li><b>Başlat / Durdur ve sayaçlar:</b> Sol sütundaki düğme seçili otomasyonu başlatır ve durdurur. Başarılı İşlem Sayacı ve çalışma süresi burada görünür. Enerji Parçası Üretim’de ayrıca yakalanan efsunlu item sayısı da sayılır.</li>
+          <li><b>Otomatik Yeniden Bağlan:</b> Bağlantı koparsa oyuna yeniden bağlanır. “+ Otomatik Av Aktif Et” seçeneği, yeniden bağlandıktan sonra otomatik avı da açar. İki seçenek birlikte işaretlenemez ve otomasyon çalışırken değiştirilemez.</li>
+          <li><b>Otomatik Toplama Aktif Et:</b> Hangi otomasyon seçiliyse Başlat’a bastığında onunla birlikte devreye girer. Tüm otomasyonlarda ortak çalışır.</li>
+        </ul>
+
+        <h3>Canlı Takip’te neler yapabilirsin?</h3>
+        <ul>
+          <li>Lisans anahtarını görebilir, yeni bir anahtar aldıysan değiştirebilirsin.</li>
+          <li>Anahtarına bağlı her client’ı ayrı kartta görür, otomasyonun şu anki durumunu izlersin.</li>
+          <li>Client’ın açık mı kapalı mı olduğunu görür, kapalıysa <b>Clienti Yeniden Aç</b> ile uzaktan açarsın. Client açılınca otomatik seçilir.</li>
+          <li>Otomasyonun çalışıp çalışmadığını görür, <b>Başlat</b> ve <b>Durdur</b> ile uzaktan yönetirsin.</li>
+          <li>Otomatik Toplama ve Otomatik Yeniden Bağlan seçeneklerinin açık olanlarını görür, istediğini açıp kapatırsın.</li>
+          <li>İstediğin client’ın anlık ekran görüntüsünü alırsın.</li>
+          <li>Her client’ın 24 saat, 1 hafta ve 1 aylık istatistiklerini görürsün.</li>
+        </ul>
+      </div>
+
+      <div class="card">
+        <h3>Lisans ve destek</h3>
+        <p class="soft">Lisans, süre uzatma, cihaz sıfırlama, hata bildirimi gibi işlemler için destek talebi açabilir ya da <a href="mailto:axiisoftwaresystems@gmail.com">axiisoftwaresystems@gmail.com</a> adresine yazabilirsin.</p>
+        <div class="row"><a class="btn" href="#durum">Canlı Takip</a><a class="btn o" href="#destek">Destek talebi</a></div>
+      </div>
+    </section>
+
+    <section data-s="durum" hidden>
+      <h2>Canlı Takip</h2>
+      <p class="alt-baslik">Bilgisayarlarındaki Axii Software’i uzaktan izle ve yönet.</p>
+      <div class="msg soft" id="girisIpucu">Canlı Takip için sağ üstten giriş yap.</div>
+
+      <div class="card gizli" id="sonuc">
+        <div class="kv"><span>Lisans</span><span id="lic"></span></div>
+        <div class="kv"><span>Bitiş tarihi</span><span id="bitis"></span></div>
+        <div class="kv"><span>Lisans anahtarı</span><span><span class="m" id="keyMetin"></span> <button class="o k" id="keyGoster">Göster</button><button class="o k" id="keyDegis">Değiştir</button></span></div>
+        <div class="kv"><span>Client</span><span id="cliDurum"></span></div>
+      </div>
+
+      <div id="cihazlar"></div>
+
+      <div class="card gizli" id="gKart">
+        <div class="row ara">
+          <h3 id="gBaslik">Client görüntüsü</h3>
+          <button id="gKapat" class="o k">Kapat ve sil</button>
+        </div>
+        <img id="gImg" class="goruntu" alt="Client görüntüsü">
+      </div>
+      <div class="msg soft" id="gMsg"></div>
+    </section>
+
+    <section data-s="destek" hidden>
+      <h2>Destek</h2>
+      <p class="alt-baslik">Sorunlarını ve isteklerini buradan ilet. Yanıt aşağıda görünür.</p>
+      <div class="msg soft gizli" id="dGiris">Destek talebi için sağ üstten giriş yap.</div>
+      <div id="dGovde" class="gizli">
+        <div class="card">
+          <h3>Yeni talep</h3>
+          <div class="row"><input id="dKonu" class="tam" maxlength="80" placeholder="Konu"></div>
+          <div class="row"><textarea id="dMesaj" maxlength="2000" placeholder="Sorunu ya da isteğini yaz"></textarea></div>
+          <div class="row"><button id="dGonder">Gönder</button></div>
+          <div class="msg" id="dMsg"></div>
+        </div>
+        <div id="dListe"></div>
+      </div>
+    </section>
+
+    <div class="altbilgi"><a href="gizlilik.html">Gizlilik ve aydınlatma</a><a href="sartlar.html">Kullanım şartları</a><a href="durum.html">Sistem durumu</a></div>
+  </main>
+</div>
+<script src="config.js"></script><script src="panel.js"></script>
+<script src="uye.js"></script>
+</body></html>
